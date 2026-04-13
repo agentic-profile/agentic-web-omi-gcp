@@ -1,0 +1,85 @@
+{
+  "entities": {
+    "Memory": {
+      "title": "Memory",
+      "description": "A conversation memory stored from Omi",
+      "type": "object",
+      "properties": {
+        "raw": {
+          "type": "object",
+          "description": "The raw JSON body from Omi"
+        },
+        "summary": {
+          "type": "object",
+          "description": "The AI-derived summary JSON object"
+        },
+        "created": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the raw value was submitted"
+        },
+        "summarized": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the summary was created"
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who owns this memory"
+        }
+      },
+      "required": ["raw", "summary", "created", "summarized", "userId"]
+    },
+    "ApiKey": {
+      "title": "ApiKey",
+      "description": "An API key for Omi integration",
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "The API key string"
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who owns this key"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the key was created"
+        }
+      },
+      "required": ["key", "userId", "createdAt"]
+    },
+    "Account": {
+      "title": "Account",
+      "description": "User account data",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "pictureUrl": { "type": "string" },
+        "role": { "type": "string" },
+        "chat_instruction": { "type": "string" },
+        "introduction": { "type": "string" },
+        "memory_summarize": { "type": "string" },
+        "credits": { "type": "number" },
+        "did": { "type": "string", "description": "Decentralized ID" }
+      },
+      "required": ["name", "pictureUrl", "role", "chat_instruction", "memory_summarize", "credits"]
+    }
+  },
+  "firestore": {
+    "/memories/{memoryId}": {
+      "schema": "Memory",
+      "description": "Collection of conversation memories"
+    },
+    "/apiKeys/{keyId}": {
+      "schema": "ApiKey",
+      "description": "Collection of API keys for Omi"
+    },
+    "/accounts/{userId}": {
+      "schema": "Account",
+      "description": "User account settings and profile"
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+    "@context": [
+        "https://www.w3.org/ns/did/v1",
+        "https://w3id.org/security/suites/jws-2020/v1",
+        "https://iamagentic.org/ns/agentic-profile/v1"
+    ],
+    "id": "TBD",
+    "name": "Omi Agent",
+    "verificationMethod": [
+        {
+            "id": "#identity-key",
+            "type": "JsonWebKey2020",
+            "publicKeyJwk": {
+                "kty": "OKP",
+                "alg": "EdDSA",
+                "crv": "Ed25519",
+                "x": "ncTE71JW7sGJAPuRXwWzIQetXCq3sqA4D1X1qlXUiHA"
+            }
+        },
+        {
+            "id": "#system-key",
+            "type": "JsonWebKey2020",
+            "publicKeyJwk": {
+                "kty": "OKP",
+                "alg": "EdDSA",
+                "crv": "Ed25519",
+                "x": "2egxfjCfzXv567e7zCggsZUmO4_27r7w2oDT33E4GAk"
+            }
+        }
+    ],
+    "service": []
+}

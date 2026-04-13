@@ -1,0 +1,5 @@
+{
+  "name": "Omi Agentic Web",
+  "description": "An AI agent that integrates with Omi wearable for long-term memory and context-aware conversations.",
+  "requestFramePermissions": []
+}

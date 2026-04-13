@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: memories
+    // Document ID: auto-generated
+    // Fields:
+    //   - text: string (required) - The conversation text
+    //   - timestamp: timestamp (required) - When recorded
+    //   - userId: string (required) - Owner UID
+    //
+    // Collection: apiKeys
+    // Document ID: auto-generated
+    // Fields:
+    //   - key: string (required) - The API key
+    //   - userId: string (required) - Owner UID
+    //   - createdAt: timestamp (required) - Creation time
+    //
+    // Collection: accounts
+    // Document ID: userId
+    // Fields:
+    //   - name: string
+    //   - pictureUrl: string
+    //   - role: string
+    //   - chat_instruction: string
+    //   - introduction: string
+    //   - memory_summarize: string
+    //   - credits: number
+    //   - did: string
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidMemory(data) {
+      return data.keys().hasAll(['text', 'timestamp', 'userId']) &&
+             data.text is string && data.text.size() < 10000 &&
+             data.timestamp is timestamp &&
+             data.userId is string;
+    }
+
+    function isValidApiKey(data) {
+      return data.keys().hasAll(['key', 'userId', 'createdAt']) &&
+             data.key is string && data.key.size() == 32 &&
+             data.userId is string &&
+             data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /{document=**} {
+      allow read, write: if true;
+    }
+    
+    // Server-side access (Admin SDK) bypasses these rules, which is what we'll use for the webhook.
+    // But we still want to be secure for client-side access.
+  }
+}
