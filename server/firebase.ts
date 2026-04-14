@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { initializeApp as initializeClientApp } from "firebase/app";
 import { getFirestore as getClientFirestore } from "firebase/firestore";
 import admin from "firebase-admin";
