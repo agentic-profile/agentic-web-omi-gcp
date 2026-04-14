@@ -2,38 +2,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // ===============================================================
-    // Assumed Data Model
-    // ===============================================================
-    //
-    // Collection: memories
-    // Document ID: auto-generated
-    // Fields:
-    //   - text: string (required) - The conversation text
-    //   - timestamp: timestamp (required) - When recorded
-    //   - userId: string (required) - Owner UID
-    //
-    // Collection: apiKeys
-    // Document ID: auto-generated
-    // Fields:
-    //   - key: string (required) - The API key
-    //   - userId: string (required) - Owner UID
-    //   - createdAt: timestamp (required) - Creation time
-    //
-    // Collection: accounts
-    // Document ID: userId
-    // Fields:
-    //   - name: string
-    //   - pictureUrl: string
-    //   - role: string
-    //   - chat_instruction: string
-    //   - introduction: string
-    //   - memory_summarize: string
-    //   - credits: number
-    //   - did: string
-    //
-    // ===============================================================
-
-    // ===============================================================
     // Helper Functions
     // ===============================================================
     function isAuthenticated() {
@@ -44,29 +12,44 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function isValidMemory(data) {
-      return data.keys().hasAll(['text', 'timestamp', 'userId']) &&
-             data.text is string && data.text.size() < 10000 &&
-             data.timestamp is timestamp &&
-             data.userId is string;
-    }
-
-    function isValidApiKey(data) {
-      return data.keys().hasAll(['key', 'userId', 'createdAt']) &&
-             data.key is string && data.key.size() == 32 &&
-             data.userId is string &&
-             data.createdAt is timestamp;
-    }
-
     // ===============================================================
-    // Rules
+    // Collection Rules
     // ===============================================================
 
+    // Accounts: Only the owner can read or write their own account document
+    match /accounts/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Memories: Only the owner can read or delete their memories.
+    // Creation is usually handled by the server Admin SDK (bypass rules), 
+    // but we allow client-side creation if the userId matches.
+    match /memories/{memoryId} {
+      allow read, delete: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow update: if false; // Memories are immutable
+    }
+
+    // API Keys: Only the owner can manage their API keys
+    match /apiKeys/{keyId} {
+      allow read: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // OTPs: Used for the publishing flow
+    match /otps/{otpId} {
+      allow read: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+    }
+
+    // Default deny: Block all other access
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
     
-    // Server-side access (Admin SDK) bypasses these rules, which is what we'll use for the webhook.
-    // But we still want to be secure for client-side access.
+    // NOTE: All server-side access (Admin SDK) bypasses these rules.
+    // This allows webhooks and server endpoints to function while keeping
+    // the client-side access strictly secured.
   }
 }

@@ -1,8 +1,7 @@
 import { Express } from "express";
 import { GoogleGenAI } from "@google/genai";
-import { doc, getDoc, query, collection, where, limit, getDocs } from "firebase/firestore";
 import fs from "fs";
-import { db, handleFirestoreError, OperationType } from "../firebase";
+import { admin, handleFirestoreError, OperationType } from "../firebase";
 import { authenticate } from "../middleware";
 
 export function registerChatEndpoints(app: Express, genAI: GoogleGenAI) {
@@ -23,10 +22,10 @@ export function registerChatEndpoints(app: Express, genAI: GoogleGenAI) {
       
       if (userId) {
         try {
-          const accountSnap = await getDoc(doc(db, "accounts", userId));
-          if (accountSnap.exists()) {
+          const accountSnap = await admin.firestore().collection("accounts").doc(userId).get();
+          if (accountSnap.exists) {
             const accountData = accountSnap.data();
-            if (accountData.chat_instruction) {
+            if (accountData?.chat_instruction) {
               instruction = accountData.chat_instruction;
             }
           }
@@ -38,12 +37,11 @@ export function registerChatEndpoints(app: Express, genAI: GoogleGenAI) {
       let context = "";
       if (userId) {
         try {
-          const q = query(
-            collection(db, "memories"),
-            where("userId", "==", userId),
-            limit(10)
-          );
-          const memoriesSnapshot = await getDocs(q);
+          const memoriesSnapshot = await admin.firestore()
+            .collection("memories")
+            .where("userId", "==", userId)
+            .limit(10)
+            .get();
           
           const memories = memoriesSnapshot.docs
             .map(doc => {

@@ -1,7 +1,6 @@
 import { Express } from "express";
 import { GoogleGenAI } from "@google/genai";
-import { query, collection, where, limit, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
-import { db, handleFirestoreError, OperationType } from "../firebase.ts";
+import { admin, handleFirestoreError, OperationType } from "../firebase.ts";
 
 export function registerOmiMemoryEndpoints(app: Express, genAI: GoogleGenAI) {
   app.post("/omi/memory/:key", async (req, res) => {
@@ -16,14 +15,14 @@ export function registerOmiMemoryEndpoints(app: Express, genAI: GoogleGenAI) {
     try {
       let keysSnapshot;
       try {
-        const q = query(
-          collection(db, "apiKeys"),
-          where("key", "==", key),
-          limit(1)
-        );
-        keysSnapshot = await getDocs(q);
+        keysSnapshot = await admin.firestore()
+          .collection("apiKeys")
+          .where("key", "==", key)
+          .limit(1)
+          .get();
       } catch (error) {
         handleFirestoreError(error, OperationType.LIST, "apiKeys");
+        return; // handleFirestoreError throws, but for TS completeness
       }
 
       if (keysSnapshot.empty) {
@@ -58,12 +57,12 @@ export function registerOmiMemoryEndpoints(app: Express, genAI: GoogleGenAI) {
       }
 
       try {
-        await addDoc(collection(db, "memories"), {
+        await admin.firestore().collection("memories").add({
           raw,
           summary,
           userId,
-          created: serverTimestamp(),
-          summarized: serverTimestamp(),
+          created: admin.firestore.FieldValue.serverTimestamp(),
+          summarized: admin.firestore.FieldValue.serverTimestamp(),
         });
       } catch (error) {
         handleFirestoreError(error, OperationType.CREATE, "memories");

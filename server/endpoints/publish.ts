@@ -1,43 +1,35 @@
-import { Express } from "express";
-import { collection, addDoc, serverTimestamp, query, where, limit, getDocs, updateDoc, doc } from "firebase/firestore";
+import { Express, Request } from "express";
 import crypto from "crypto";
-import { db, handleFirestoreError, OperationType } from "../firebase.ts";
+import { admin, handleFirestoreError, OperationType } from "../firebase.ts";
 import { authenticate } from "../middleware.ts";
+import { appUrl } from "../utils/http.ts";
 
 export function registerPublishEndpoints(app: Express) {
-  app.get("/publish/payload", authenticate, async (req: any, res) => {
+  app.get("/publish/payload", authenticate, async (req: Request, res) => {
     console.log("[API] GET /publish/payload");
-    const userId = req.user.uid;
+    const userId = (req as any).user.uid;
 
     try {
       const otp = crypto.randomBytes(16).toString("base64url");
       
       try {
-        await addDoc(collection(db, "otps"), {
+        await admin.firestore().collection("otps").add({
           otp,
           userId,
-          createdAt: serverTimestamp(),
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
           used: false
         });
       } catch (error) {
         handleFirestoreError(error, OperationType.CREATE, "otps");
       }
 
-      const protocol = req.headers["x-forwarded-proto"] || "https";
-      let hostHeader = req.headers["x-forwarded-host"] || req.headers.host || "";
-      let host = Array.isArray(hostHeader) ? hostHeader[0] : hostHeader;
-      
-      if (host.includes("ais-dev-")) {
-        host = host.replace("ais-dev-", "ais-pre-");
-      }
-      
-      const appUrl = process.env.APP_URL || `${protocol}://${host}`;
-      console.log(`[API] Generated payload for ${userId} with callback: ${appUrl}/publish/callback`);
+      const baseUrl = appUrl(req);
+      console.log(`[API] Generated payload for ${userId} with callback: ${baseUrl}/publish/callback`);
 
       const payload = {
         type: "agent",
         callback: {
-          url: `${appUrl}/publish/callback`,
+          url: `${baseUrl}/publish/callback`,
           method: "POST",
           headers: {
             "Content-Type": "application/json"
@@ -51,7 +43,7 @@ export function registerPublishEndpoints(app: Express) {
           id: "#friends",
           name: "Friendship Agent",
           type: "a2a/lite",
-          serviceEndpoint: `${appUrl}/a2a`,
+          serviceEndpoint: `${baseUrl}/a2a`,
           capabilityInvocation: [
             "did:web:agents-api.matchwise.ai#system-key"
           ]
@@ -73,12 +65,11 @@ export function registerPublishEndpoints(app: Express) {
     }
 
     try {
-      const q = query(
-        collection(db, "otps"),
-        where("otp", "==", otp),
-        limit(1)
-      );
-      const otpSnapshot = await getDocs(q);
+      const otpSnapshot = await admin.firestore()
+        .collection("otps")
+        .where("otp", "==", otp)
+        .limit(1)
+        .get();
 
       if (otpSnapshot.empty) {
         console.error(`[WEBHOOK] OTP not found: ${otp}`);
@@ -89,7 +80,7 @@ export function registerPublishEndpoints(app: Express) {
       const { userId } = otpDoc.data();
 
       try {
-        await updateDoc(doc(db, "accounts", userId), {
+        await admin.firestore().collection("accounts").doc(userId).update({
           agentDid: agentDid
         });
         console.log(`[WEBHOOK] Updated account ${userId} with agentDid: ${agentDid}`);
@@ -98,9 +89,9 @@ export function registerPublishEndpoints(app: Express) {
       }
 
       try {
-        await updateDoc(otpDoc.ref, {
+        await otpDoc.ref.update({
           used: true,
-          usedAt: serverTimestamp()
+          usedAt: admin.firestore.FieldValue.serverTimestamp()
         });
       } catch (error) {
         handleFirestoreError(error, OperationType.UPDATE, `otps/${otpDoc.id}`);
