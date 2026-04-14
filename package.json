@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "cloud:deploy": "gcloud run deploy agentic-web-omi-gcp --source . --region us-central1 --allow-unauthenticated --set-env-vars=\"NODE_ENV=production\" --set-secrets=\"GEMINI_API_KEY=GEMINI_API_KEY:latest\""
+    "cloud:deploy": "gcloud run deploy agentic-web-omi-gcp --source . --region us-central1 --allow-unauthenticated --set-env-vars=\"NODE_ENV=production\" --set-secrets=\"GEMINI_API_KEY=GEMINI_API_KEY:latest\"",
+    "hosting:deploy": "pnpm build && firebase deploy --only hosting"
   },
   "dependencies": {
     "@agentic-profile/a2a-mcp-express": "^0.7.12",

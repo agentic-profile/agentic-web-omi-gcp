@@ -2,6 +2,23 @@
   "firestore": {
     "rules": "firestore.rules"
   },
+  "hosting": {
+    "public": "dist",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "run": {
+          "serviceId": "agentic-web-omi-gcp",
+          "region": "us-central1"
+        }
+      }
+    ]
+  },
   "emulators": {
     "auth": {
       "port": 9099
