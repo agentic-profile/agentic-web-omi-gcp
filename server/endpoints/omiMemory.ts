@@ -1,6 +1,6 @@
 import { Express } from "express";
 import { GoogleGenAI } from "@google/genai";
-import { admin, handleFirestoreError, OperationType } from "../firebase.ts";
+import { admin, adminDb, handleFirestoreError, OperationType } from "../firebase.ts";
 
 export function registerOmiMemoryEndpoints(app: Express, genAI: GoogleGenAI) {
   app.post("/omi/memory/:key", async (req, res) => {
@@ -15,7 +15,7 @@ export function registerOmiMemoryEndpoints(app: Express, genAI: GoogleGenAI) {
     try {
       let keysSnapshot;
       try {
-        keysSnapshot = await admin.firestore()
+        keysSnapshot = await adminDb
           .collection("apiKeys")
           .where("key", "==", key)
           .limit(1)
@@ -57,7 +57,7 @@ export function registerOmiMemoryEndpoints(app: Express, genAI: GoogleGenAI) {
       }
 
       try {
-        await admin.firestore().collection("memories").add({
+        await adminDb.collection("memories").add({
           raw,
           summary,
           userId,

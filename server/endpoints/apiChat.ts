@@ -1,7 +1,7 @@
 import { Express } from "express";
 import { GoogleGenAI } from "@google/genai";
 import fs from "fs";
-import { admin, handleFirestoreError, OperationType } from "../firebase";
+import { admin, adminDb, handleFirestoreError, OperationType } from "../firebase";
 import { authenticate } from "../middleware";
 
 export function registerChatEndpoints(app: Express, genAI: GoogleGenAI) {
@@ -22,7 +22,7 @@ export function registerChatEndpoints(app: Express, genAI: GoogleGenAI) {
       
       if (userId) {
         try {
-          const accountSnap = await admin.firestore().collection("accounts").doc(userId).get();
+          const accountSnap = await adminDb.collection("accounts").doc(userId).get();
           if (accountSnap.exists) {
             const accountData = accountSnap.data();
             if (accountData?.chat_instruction) {
@@ -37,7 +37,7 @@ export function registerChatEndpoints(app: Express, genAI: GoogleGenAI) {
       let context = "";
       if (userId) {
         try {
-          const memoriesSnapshot = await admin.firestore()
+          const memoriesSnapshot = await adminDb
             .collection("memories")
             .where("userId", "==", userId)
             .limit(10)

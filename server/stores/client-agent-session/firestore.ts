@@ -1,10 +1,10 @@
-import { admin, handleFirestoreError, OperationType } from "../../firebase.js";
+import { admin, adminDb, handleFirestoreError, OperationType } from "../../firebase.js";
 import { ClientAgentSessionStore } from "./types.js";
 
 const COLLECTION = "client_agent_sessions";
 
 export class FirestoreClientAgentSessionStore implements ClientAgentSessionStore {
-    private db = admin.firestore();
+    private db = adminDb;
 
     async create(session: any): Promise<any> {
         try {

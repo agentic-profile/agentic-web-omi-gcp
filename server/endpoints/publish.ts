@@ -1,19 +1,19 @@
 import { Express, Request } from "express";
 import crypto from "crypto";
-import { admin, handleFirestoreError, OperationType } from "../firebase.ts";
+import { admin, adminDb, handleFirestoreError, OperationType } from "../firebase.ts";
 import { authenticate } from "../middleware.ts";
 import { appUrl } from "../utils/http.ts";
 
 export function registerPublishEndpoints(app: Express) {
   app.get("/publish/payload", authenticate, async (req: Request, res) => {
-    console.log("[API] GET /publish/payload");
     const userId = (req as any).user.uid;
+    console.log(`[API] GET /publish/payload for user: ${userId}`);
 
     try {
       const otp = crypto.randomBytes(16).toString("base64url");
       
       try {
-        await admin.firestore().collection("otps").add({
+        await adminDb.collection("otps").add({
           otp,
           userId,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -28,6 +28,9 @@ export function registerPublishEndpoints(app: Express) {
 
       const payload = {
         type: "agent",
+        metadata: {
+          manageUrl: `${baseUrl}/more`,
+        },
         callback: {
           url: `${baseUrl}/publish/callback`,
           method: "POST",
@@ -52,8 +55,28 @@ export function registerPublishEndpoints(app: Express) {
 
       res.json(payload);
     } catch (error) {
-      console.error("Publish Payload Error:", error);
-      res.status(500).json({ error: "Failed to generate publish payload" });
+      console.error(`[API] Publish Payload Error for ${userId}:`, error);
+      res.status(500).json({ 
+        error: "Failed to generate publish payload",
+        details: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // Diagnostic endpoint to check Firestore connectivity
+  app.get("/api/admin/status", authenticate, async (req, res) => {
+    const userId = (req as any).user.uid;
+    try {
+      // Just try a simple read to check connectivity
+      await adminDb.collection("accounts").doc(userId).get();
+      res.json({ status: "connected", database: adminDb.databaseId });
+    } catch (error: any) {
+      console.error("[API] Admin Status Error:", error);
+      res.status(500).json({ 
+        status: "error", 
+        message: error.message,
+        code: error.code
+      });
     }
   });
 
@@ -65,7 +88,7 @@ export function registerPublishEndpoints(app: Express) {
     }
 
     try {
-      const otpSnapshot = await admin.firestore()
+      const otpSnapshot = await adminDb
         .collection("otps")
         .where("otp", "==", otp)
         .limit(1)
@@ -80,7 +103,7 @@ export function registerPublishEndpoints(app: Express) {
       const { userId } = otpDoc.data();
 
       try {
-        await admin.firestore().collection("accounts").doc(userId).update({
+        await adminDb.collection("accounts").doc(userId).update({
           agentDid: agentDid
         });
         console.log(`[WEBHOOK] Updated account ${userId} with agentDid: ${agentDid}`);

@@ -2,6 +2,7 @@ import "dotenv/config";
 import { initializeApp as initializeClientApp } from "firebase/app";
 import { getFirestore as getClientFirestore } from "firebase/firestore";
 import admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs";
 
 let firebaseConfig: any = {};
@@ -36,12 +37,16 @@ if (firebaseConfig.projectId) {
     admin.initializeApp({
       projectId: firebaseConfig.projectId,
     });
+    console.log(`[Firebase Admin] Initialized for project: ${firebaseConfig.projectId}`);
   }
 } else {
   console.warn("Firebase Admin SDK not initialized due to missing projectId.");
 }
 
 export { admin };
+const databaseId = firebaseConfig.firestoreDatabaseId || "(default)";
+console.log(`[Firebase Admin] Using Firestore database: ${databaseId}`);
+export const adminDb = getFirestore(databaseId);
 
 export const OperationType = {
   CREATE: 'create',

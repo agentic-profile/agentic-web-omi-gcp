@@ -1,5 +1,5 @@
 import { Express, Request } from "express";
-import { admin, handleFirestoreError, OperationType } from "../firebase.ts";
+import { admin, adminDb, handleFirestoreError, OperationType } from "../firebase.ts";
 import { authenticate } from "../middleware.ts";
 import { generateBase64UrlKey } from "../utils/misc.ts";
 import { appUrl } from "../utils/http.ts";
@@ -11,7 +11,7 @@ export function registerOmiApiKeyEndpoints(app: Express) {
     try {
       let keysSnapshot;
       try {
-        keysSnapshot = await admin.firestore()
+        keysSnapshot = await adminDb
           .collection("apiKeys")
           .where("userId", "==", userId)
           .limit(1)
@@ -25,7 +25,7 @@ export function registerOmiApiKeyEndpoints(app: Express) {
       if (keysSnapshot.empty) {
         apiKey = generateBase64UrlKey(16);
         try {
-          await admin.firestore().collection("apiKeys").add({
+          await adminDb.collection("apiKeys").add({
             key: apiKey,
             userId,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),

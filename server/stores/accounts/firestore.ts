@@ -1,11 +1,11 @@
-import { admin, handleFirestoreError, OperationType } from "../../firebase.js";
+import { admin, adminDb, handleFirestoreError, OperationType } from "../../firebase.js";
 import { Account, AccountStore, CreateAccountFields, UpdateAccountFields } from "./types.js";
 import { UserID, DID } from "@agentic-profile/common";
 
 const COLLECTION = "accounts";
 
 export class FirestoreAccountStore implements AccountStore {
-    private db = admin.firestore();
+    private db = adminDb;
 
     async createAccount(account: CreateAccountFields): Promise<Account> {
         try {
