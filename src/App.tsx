@@ -144,7 +144,7 @@ export default function App() {
             <Route path="/setup" element={user ? <OmiSetupPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/publish" element={user ? <PublishPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/more" element={user ? <MorePage /> : <LandingPage user={user} login={login} />} />
-            <Route path="/manage" element={user ? <ManagePage /> : <LandingPage user={user} login={login} />} />
+            <Route path="/manage" element={<ManagePage user={user} login={login} />} />
             <Route path="/account" element={user ? <MyAccountPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/edit-prompts" element={user ? <EditPromptsPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/settings" element={user ? <SettingsPage /> : <LandingPage user={user} login={login} />} />
