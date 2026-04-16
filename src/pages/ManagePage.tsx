@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { User as UserIcon, Terminal, FileEdit, ChevronRight, History, MessageSquare, Settings } from "lucide-react";
 
-export default function MorePage() {
+export default function ManagePage() {
   const navigate = useNavigate();
 
   const options = [
@@ -16,7 +16,7 @@ export default function MorePage() {
 
   return (
     <div className="p-4 md:p-12 max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold mb-8">More</h1>
+      <h1 className="text-3xl font-bold mb-8">Manage</h1>
       <div className="bg-zinc-900 rounded-2xl border border-zinc-800 divide-y divide-zinc-800 overflow-hidden">
         {options.map((opt) => (
           <button

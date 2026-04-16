@@ -18,7 +18,9 @@ import MorePage from "./pages/MorePage";
 import MyAccountPage from "./pages/MyAccountPage";
 import EditPromptsPage from "./pages/EditPromptsPage";
 import TestWebhookPage from "./pages/TestWebhookPage";
-import PublishPage from "./pages/PublishPage";
+import PublishPage from "./pages/publish/PublishPage";
+import SettingsPage from "./pages/SettingsPage";
+import ManagePage from "./pages/ManagePage";
 import { Settings, History, Home, LogIn, LogOut, Menu, X, ArrowLeftRight, Share2 } from "lucide-react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
@@ -75,7 +77,7 @@ export default function App() {
         {/* Mobile Header */}
         <header className="md:hidden flex items-center justify-between p-4 border-b border-zinc-800 bg-zinc-900 z-50">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-orange-500 rounded flex items-center justify-center font-bold text-black text-xs">M</div>
+            <img src="/favicon.svg" alt="Logo" className="w-6 h-6" />
             <span className="font-bold text-lg tracking-tight">Omi Agentic Web</span>
           </div>
           <button 
@@ -92,7 +94,7 @@ export default function App() {
           ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
         `}>
           <div className="hidden md:flex items-center gap-2 px-1">
-            <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center font-bold text-black">O</div>
+            <img src="/favicon.svg" alt="Logo" className="w-8 h-8" />
             <span className="font-bold text-xl tracking-tight">Omi Agentic Web</span>
           </div>
 
@@ -111,7 +113,7 @@ export default function App() {
             {user ? (
               <div className="flex flex-col gap-4">
                 <Link 
-                  to="/more/account" 
+                  to="/account" 
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-zinc-800 transition-colors group"
                 >
@@ -142,9 +144,11 @@ export default function App() {
             <Route path="/setup" element={user ? <OmiSetupPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/publish" element={user ? <PublishPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/more" element={user ? <MorePage /> : <LandingPage user={user} login={login} />} />
-            <Route path="/more/account" element={user ? <MyAccountPage user={user} /> : <LandingPage user={user} login={login} />} />
-            <Route path="/more/prompts" element={user ? <EditPromptsPage user={user} /> : <LandingPage user={user} login={login} />} />
-            <Route path="/more/test" element={user ? <TestWebhookPage user={user} /> : <LandingPage user={user} login={login} />} />
+            <Route path="/manage" element={user ? <ManagePage /> : <LandingPage user={user} login={login} />} />
+            <Route path="/account" element={user ? <MyAccountPage user={user} /> : <LandingPage user={user} login={login} />} />
+            <Route path="/edit-prompts" element={user ? <EditPromptsPage user={user} /> : <LandingPage user={user} login={login} />} />
+            <Route path="/settings" element={user ? <SettingsPage /> : <LandingPage user={user} login={login} />} />
+            <Route path="/test" element={user ? <TestWebhookPage user={user} /> : <LandingPage user={user} login={login} />} />
           </Routes>
         </main>
         <Toaster position="top-right" theme="dark" />

@@ -9,3 +9,7 @@ export function appUrl( req: Request ): string {
     
     return process.env.APP_URL || `${protocol}://${host}`;
 }
+
+export function manageChatUrl( req: Request ) {
+    return `${appUrl(req)}/chat`;
+}

@@ -29,7 +29,7 @@ export function registerPublishEndpoints(app: Express) {
       const payload = {
         type: "agent",
         metadata: {
-          manageUrl: `${baseUrl}/more`,
+          manageUrl: `${baseUrl}/manage`,
         },
         callback: {
           url: `${baseUrl}/publish/callback`,

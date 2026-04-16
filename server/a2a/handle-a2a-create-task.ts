@@ -16,6 +16,7 @@ import { resolveAgentChatsStore } from "../stores/agent-chats/index.js";
 import { AgentPair } from '../stores/agent-chats/types.js';
 import { ensureAgentOwnerInGoodStanding } from './chat/misc.js';
 import { continueChat } from './chat/continue-chat.ts';
+import { manageChatUrl } from "../utils/http.js";
 
 //const messageQueue = resolveMessageQueue();
 const agentStore = resolveAgentsStore();
@@ -28,7 +29,7 @@ const agentChatsStore = resolveAgentChatsStore();
  * @param param1 
  * @returns 
  */
-export async function handleA2aCreateTask(jrpcRequest: JsonRpcRequest, {session}: JsonRpcRequestContext): Promise<JsonRpcResponse> {
+export async function handleA2aCreateTask(jrpcRequest: JsonRpcRequest, {session, req}: JsonRpcRequestContext): Promise<JsonRpcResponse> {
     if( !session )
         return jrpcErrorAuthRequired( jrpcRequest.id! );
 
@@ -52,6 +53,7 @@ export async function handleA2aCreateTask(jrpcRequest: JsonRpcRequest, {session}
     await ensureAgentOwnerInGoodStanding(agent);
 
     // Has this chat already concluded on my part?
+    const manageUrl = manageChatUrl(req);
     const chatId: AgentPair = { agentDid, peerDid };
     const chat = await agentChatsStore.read(chatId);
     const like = chat?.agentResolution?.like;
@@ -63,7 +65,8 @@ export async function handleA2aCreateTask(jrpcRequest: JsonRpcRequest, {session}
                 contextId: `${agentDid}^${peerDid}`,
                 status: {
                     state: "TASK_STATE_COMPLETED",
-                }
+                },
+                manageUrl
             }
         });
     }
@@ -84,6 +87,7 @@ export async function handleA2aCreateTask(jrpcRequest: JsonRpcRequest, {session}
         task: {
             id: message.taskId,
             contextId: `${agentDid}^${peerDid}`,
+            manageUrl
         }
     });
 }

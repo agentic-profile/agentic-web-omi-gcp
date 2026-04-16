@@ -1,20 +1,23 @@
 import React, { useEffect, useState } from "react";
 import { User } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "../firebase";
+import { db } from "../../firebase";
 import { Button } from "@/src/components/ui/button";
+import { Switch } from "@/src/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Share2, Fingerprint, Rocket, ChevronDown, ChevronUp, Code } from "lucide-react";
 import { toast } from "sonner";
-import { DIDLink } from "../components/DIDLink";
-
-const IMPORT_AGENT_URL = "https://matchwise.ai/import/agent";
+import { DIDLink } from "../../components/DIDLink";
+import { base64UrlEncode } from "../../utils/misc";
+import { SelectPublisher, DEFAULT_PUBLISHER } from "./SelectPublisher";
+import { useSettingsStore } from "../../store/useSettingsStore";
 
 export default function PublishPage({ user }: { user: User }) {
   const [agentDid, setAgentDid] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [payload, setPayload] = useState<any>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [publisherUrl, setPublisherUrl] = useState(DEFAULT_PUBLISHER);
+  const { isExpertMode, setExpertMode } = useSettingsStore();
 
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, "accounts", user.uid), (docSnap) => {
@@ -52,16 +55,8 @@ export default function PublishPage({ user }: { user: User }) {
     }
 
     try {
-      const jsonStr = JSON.stringify(payload);
-      // Base64 encode with UTF-8 support
-      const base64 = btoa(unescape(encodeURIComponent(jsonStr)));
-      // Convert to base64url (replace + with -, / with _, and remove padding =)
-      const base64url = base64
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
-      
-      const url = `${IMPORT_AGENT_URL}?payload=${base64url}`;
+      const base64url = base64UrlEncode(payload); 
+      const url = `${publisherUrl}?payload=${base64url}`;
       window.open(url, "_matchwise");
     } catch (error) {
       console.error("Failed to encode payload:", error);
@@ -94,23 +89,11 @@ export default function PublishPage({ user }: { user: User }) {
               Ready to Launch?
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6">            
             <p className="text-zinc-300">
               By going LIVE with your agent, you allow it to interact with other agents in the decentralized network. 
               Your memories stay private, but your agent learns your preferences to represent you.
             </p>
-            
-            <div className="p-4 bg-zinc-950 border border-zinc-800 rounded-xl space-y-2">
-              <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
-                <Fingerprint size={14} />
-                Agent DID
-              </label>
-              {agentDid ? (
-                <DIDLink did={agentDid} />
-              ) : (
-                <div className="text-sm text-zinc-500 italic">Not ready</div>
-              )}
-            </div>
 
             <Button 
               onClick={handleJoin}
@@ -118,8 +101,56 @@ export default function PublishPage({ user }: { user: User }) {
             >
               Join Agentic Web
             </Button>
+
+            <div className="flex justify-end items-center gap-2 pt-1">
+              <label
+                htmlFor="publish-expert-toggle"
+                className="text-sm text-zinc-400 cursor-pointer select-none"
+              >
+                Expert
+              </label>
+              <Switch
+                id="publish-expert-toggle"
+                checked={isExpertMode}
+                onCheckedChange={setExpertMode}
+              />
+            </div>
+
+
+            {isExpertMode && (
+              <>
+                <RegistrationPayloadPanel payload={payload} />
+                <SelectPublisher 
+                  publisherUrl={publisherUrl} 
+                  onPublisherUrlChange={setPublisherUrl} 
+                />
+              </>
+            )}
           </CardContent>
         </Card>
+
+        {agentDid && (
+          <Card className="bg-orange-500/5 border-orange-500/20 overflow-hidden relative border-dashed">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-orange-500">
+                <Share2 size={24} />
+                Congratulations!
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-zinc-300">
+                Your agent is now live on the Agentic Web. You can share your Agent DID to connect with others.
+              </p>
+              <div className="p-4 bg-zinc-950/50 border border-orange-500/10 rounded-xl space-y-2">
+                <label className="text-xs font-semibold text-orange-500/50 uppercase tracking-wider flex items-center gap-2">
+                  <Fingerprint size={14} />
+                  Agent DID
+                </label>
+                <DIDLink did={agentDid} />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid md:grid-cols-3 gap-4">
           {[
@@ -134,34 +165,37 @@ export default function PublishPage({ user }: { user: User }) {
           ))}
         </div>
 
-        {payload && (
-          <Card className="bg-zinc-900 border-zinc-800">
-            <CardHeader 
-              className="cursor-pointer hover:bg-zinc-800/50 transition-colors py-4"
-              onClick={() => setIsExpanded(!isExpanded)}
-            >
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xs font-semibold flex items-center gap-2 text-zinc-500 uppercase tracking-wider">
-                  <Code size={14} />
-                  Registration Payload
-                </CardTitle>
-                <div className="text-zinc-500">
-                  {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                </div>
-              </div>
-            </CardHeader>
-            {isExpanded && (
-              <CardContent className="pt-0">
-                <div className="relative">
-                  <pre className="bg-zinc-950 p-4 rounded-xl text-[10px] md:text-xs font-mono text-zinc-400 overflow-auto max-h-[400px] border border-zinc-800">
-                    {JSON.stringify(payload, null, 2)}
-                  </pre>
-                </div>
-              </CardContent>
-            )}
-          </Card>
-        )}
       </div>
+    </div>
+  );
+}
+
+function RegistrationPayloadPanel({ payload }: { payload: unknown }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div className="border border-zinc-800 rounded-xl overflow-hidden">
+      <div
+        className="cursor-pointer hover:bg-zinc-800/50 transition-colors py-3 px-4 flex items-center justify-between"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="text-[10px] font-semibold flex items-center gap-2 text-zinc-500 uppercase tracking-wider">
+          <Code size={12} />
+          Registration Payload
+        </div>
+        <div className="text-zinc-500">
+          {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </div>
+      </div>
+      {isExpanded && (
+        <div className="p-4 pt-0 border-t border-zinc-800/50">
+          <div className="relative">
+            <pre className="bg-zinc-950 p-3 rounded-lg text-[10px] font-mono text-zinc-400 overflow-auto max-h-[300px]">
+              {JSON.stringify(payload, null, 2)}
+            </pre>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
