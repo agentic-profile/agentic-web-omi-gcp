@@ -218,6 +218,7 @@ export default function AgentChatsDetailPage({
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const [peerDisplayName, setPeerDisplayName] = useState<string | null>(null);
+  const [peerLikeOverride, setPeerLikeOverride] = useState<boolean | null | undefined>(undefined);
 
   const docId = useMemo(() => {
     if (!agentDid || !peerDid) return "";
@@ -286,6 +287,43 @@ export default function AgentChatsDetailPage({
 
   const agentLiked = useMemo(() => chat?.agentResolution?.like === true, [chat?.agentResolution]);
   const peerLiked = useMemo(() => chat?.peerResolution?.like === true, [chat?.peerResolution]);
+  const peerLikeValue = (peerLikeOverride !== undefined ? peerLikeOverride : (chat?.peerResolution?.like ?? null)) as
+    | boolean
+    | null;
+
+  useEffect(() => {
+    if (peerLikeOverride === undefined) return;
+    const chatLike = (chat?.peerResolution?.like ?? null) as boolean | null;
+    if (chatLike === peerLikeOverride) setPeerLikeOverride(undefined);
+  }, [peerLikeOverride, chat?.peerResolution]);
+
+  const performPeerLike = useCallback(
+    async (next: boolean | null) => {
+      if (!user || !agentDid || !peerDid) return;
+      setPeerLikeOverride(next);
+      setError(null);
+      try {
+        const idToken = await user.getIdToken();
+        const res = await fetch("/api/agent-chats/like", {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ agentDid, peerDid, like: next }),
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || "Failed to update like");
+        }
+      } catch (e) {
+        console.error("Failed to update like:", e);
+        setPeerLikeOverride(undefined);
+        setError(e instanceof Error ? e.message : "Failed to update like");
+      }
+    },
+    [agentDid, peerDid, user],
+  );
 
   const performContinue = useCallback(
     async (options?: { rewind?: boolean; scrollToBottom?: boolean }) => {
@@ -443,7 +481,7 @@ export default function AgentChatsDetailPage({
               <div className="p-5 space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <AgentIdentity did={chat.agentDid} label="Your agent" liked={agentLiked} size="lg" />
-                  <AgentIdentity did={chat.peerDid} label="Peer agent" liked={peerLiked} size="lg" />
+                  <AgentIdentity did={chat.peerDid} label="Peer agent" liked={peerLikeValue} size="lg" onToggleLike={performPeerLike} />
                 </div>
 
                 <div className="pt-3 border-t border-zinc-800 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">

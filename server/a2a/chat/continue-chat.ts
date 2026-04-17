@@ -1,4 +1,4 @@
-import { generateReply } from './reply.js';
+import { ChatResolutionPair, generateReply } from './reply.js';
 import { resolveAgent } from '../../utils/agent.js';
 import { a2aFetch, createA2aSendMessageRequest } from '../../lite-clients/a2a-client.js';
 import { AuthContext } from '../../lite-clients/client.js';
@@ -8,9 +8,11 @@ import { UserID, DID, prettyJson } from '@agentic-profile/common';
 import { truncate } from '../../utils/misc.js';
 import log from '../../utils/log.js';
 import { resolveAgentChatsStore } from '../../stores/agent-chats/index.js';
-import { AgentPair, Message } from '../../stores/agent-chats/types.js';
+import { AgentPair, Message, MessageMetadata } from '../../stores/agent-chats/types.js';
 import { updateDashboard } from './dashboard-client.js';
 import { getChatDetailUrl } from './misc.js';
+import { UpdateAgentChatParams } from '../../stores/agent-chats/types.js';
+import { ReplyResult } from './reply.js';
 
 
 const agentChatsStore = resolveAgentChatsStore();
@@ -43,6 +45,7 @@ export async function continueChat( { uid, agentDid, peerDid, envelopeOptions = 
         },
         peerDid
     });
+
     const { agentResolution, peerResolution } = chatUpdate;
     log.debug( 'continueChat() generated reply', prettyJson({
         agentReplyText: truncate(agentReplyText),
@@ -53,6 +56,28 @@ export async function continueChat( { uid, agentDid, peerDid, envelopeOptions = 
         messageCount
     }) );
 
+    return await updateChat({ 
+        uid, agentDid, peerDid, chatUpdate, agentReplyText,
+        messageCount, metadata, envelopeOptions, prevResolutions: replyResult.prev
+    });
+}
+
+interface UpdateChatParams {
+    uid: UserID;
+    agentDid: DID;
+    peerDid: DID;
+    chatUpdate: UpdateAgentChatParams;
+    agentReplyText?: string;
+    messageCount?: number;
+    metadata?: MessageMetadata;
+    envelopeOptions?: EnvelopeOptions;
+    prevResolutions?: ChatResolutionPair;
+}
+
+export async function updateChat({
+    uid, agentDid, peerDid, chatUpdate, agentReplyText,
+    messageCount, metadata, envelopeOptions = {}, prevResolutions = {}}: UpdateChatParams ) {
+
     // if there are new resolutions, then update the dashboard
     const authContext: AuthContext = {
         agentDid,
@@ -60,7 +85,8 @@ export async function continueChat( { uid, agentDid, peerDid, envelopeOptions = 
         authTokenCache: createInMemoryAuthTokenCache()
     };
     const force = messageCount <= 2; // force update if we're just starting the chat
-    const prev = await updateDashboard( replyResult.prev, {
+    const { agentResolution, peerResolution } = chatUpdate;
+    const prev = await updateDashboard( prevResolutions, {
         agentDid,
         peerDid,
         messages: chatUpdate.messages,
@@ -73,9 +99,10 @@ export async function continueChat( { uid, agentDid, peerDid, envelopeOptions = 
     // send reply to peer
     //
     const { serviceUrl } = await resolveAgent(agentDid);
+    const parts = agentReplyText ? [{ text: agentReplyText }] : [];
     const agentMessage = {
         role: "ROLE_USER", // <= temporary, while we send to peer
-        parts: [{ text: agentReplyText }],
+        parts,
         metadata: {
             ...metadata,
             envelope: {
@@ -130,5 +157,3 @@ export async function continueChat( { uid, agentDid, peerDid, envelopeOptions = 
         ],
     };
 }
-
-

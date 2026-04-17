@@ -1,10 +1,12 @@
 import type { Express } from "express";
 import { authenticate } from "../middleware.ts";
-import { resolveAgentChatsStore } from "../stores/agent-chats/index.ts";
 import { continueChat } from "../a2a/chat/continue-chat.ts";
 import { ensureAgentOwnerInGoodStanding } from "../a2a/chat/misc.ts";
+import { resolveAgentChatsStore } from "../stores/agent-chats/index.ts";
+import { updateChat } from "../a2a/chat/continue-chat.ts";
 
 export function registerAgentChatsEndpoints(app: Express) {
+  const store = resolveAgentChatsStore();
 
   /*
   app.get("/api/agent-chats", authenticate, async (req: any, res) => {
@@ -91,6 +93,46 @@ export function registerAgentChatsEndpoints(app: Express) {
     } catch (e) {
       console.error("[API] POST /api/agent-chats/continue", e);
       return res.status(500).json({ error: "Failed to continue agent chat" });
+    }
+  });
+
+  app.put("/api/agent-chats/like", authenticate, async (req: any, res) => {
+    const uid = req.user.uid as string;
+    const agentDid = String(req.body?.agentDid ?? "");
+    const peerDid = String(req.body?.peerDid ?? "");
+    const like = req.body?.like;
+    if( like !== true && like !== false && like !== null ) {
+      return res.status(400).json({ error: "like must be true, false, or null" });
+    }
+    if (!agentDid || !peerDid) {
+      return res.status(400).json({ error: "agentDid and peerDid are required" });
+    }
+
+    try {
+      return await updateChat({ 
+        uid,
+        agentDid,
+        peerDid,
+        chatUpdate: {
+          agentResolution: {
+            like,
+          },
+        },
+        metadata: {
+          resolution: {
+            like,
+          },
+        },
+        //agentReplyText,
+        //messageCount,
+        //envelopeOptions,
+        //prevResolutions
+      });
+
+      return res.status(204).send();
+    } catch(error) {
+      console.error("[API] PUT /api/agent-chats/like", error);
+      return res.status(500).json({ error: "Failed to update agent chat" });
     }
   });
 }

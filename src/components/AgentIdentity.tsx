@@ -34,11 +34,13 @@ export default function AgentIdentity({
   label,
   liked,
   size = "md",
+  onToggleLike,
 }: {
   did: string;
   label: string;
-  liked?: boolean;
+  liked?: boolean | null;
   size?: "sm" | "md" | "lg";
+  onToggleLike?: (next: boolean | null) => void | Promise<void>;
 }) {
   const [doc, setDoc] = useState<AgenticProfileLike | null>(null);
   const [loading, setLoading] = useState(false);
@@ -72,6 +74,7 @@ export default function AgentIdentity({
   const nameClass = size === "sm" ? "text-xs" : size === "lg" ? "text-base" : "text-sm";
   const labelClass = size === "sm" ? "text-[11px]" : size === "lg" ? "text-sm" : "text-xs";
   const starSize = size === "sm" ? 16 : size === "lg" ? 20 : 18;
+  const starInteractive = typeof onToggleLike === "function";
 
   return (
     <div className="space-y-2">
@@ -88,11 +91,28 @@ export default function AgentIdentity({
             <div className="flex items-center gap-2 min-w-0">
               <div className={clsx("font-semibold text-zinc-100 truncate", nameClass)}>{name}</div>
               {liked !== undefined ? (
-                <Star
-                  size={starSize}
-                  className={clsx(liked ? "text-amber-500 fill-amber-500" : "text-zinc-600")}
-                  aria-label={liked ? "Resolution: like" : "Resolution: not like"}
-                />
+                <button
+                  type="button"
+                  className={clsx(
+                    "shrink-0",
+                    starInteractive ? "cursor-pointer" : "cursor-default",
+                    starInteractive ? "hover:opacity-90" : "",
+                    "focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/60 rounded",
+                  )}
+                  onClick={() => {
+                    if (!starInteractive) return;
+                    const current = liked ?? null;
+                    const next = current === null ? true : current === true ? false : null;
+                    void onToggleLike(next);
+                  }}
+                  aria-label={liked === true ? "Resolution: like" : liked === false ? "Resolution: not like" : "Resolution: unset"}
+                  disabled={!starInteractive}
+                >
+                  <Star
+                    size={starSize}
+                    className={clsx(liked === true ? "text-amber-500 fill-amber-500" : "text-zinc-600")}
+                  />
+                </button>
               ) : null}
             </div>
           ) : null}
