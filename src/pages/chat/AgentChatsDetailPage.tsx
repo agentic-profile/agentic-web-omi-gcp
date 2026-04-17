@@ -4,7 +4,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import type { User } from "firebase/auth";
 import { deleteDoc, doc, onSnapshot } from "firebase/firestore";
 import clsx from "clsx";
-import { Loader2, Star, Trash2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
@@ -218,7 +218,7 @@ export default function AgentChatsDetailPage({
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const [peerDisplayName, setPeerDisplayName] = useState<string | null>(null);
-  const [peerLikeOverride, setPeerLikeOverride] = useState<boolean | null | undefined>(undefined);
+  const [agentResolutionLikeUpdating, setAgentResolutionLikeUpdating] = useState(false);
 
   const docId = useMemo(() => {
     if (!agentDid || !peerDid) return "";
@@ -285,22 +285,17 @@ export default function AgentChatsDetailPage({
     };
   }, [peerDid]);
 
-  const agentLiked = useMemo(() => chat?.agentResolution?.like === true, [chat?.agentResolution]);
-  const peerLiked = useMemo(() => chat?.peerResolution?.like === true, [chat?.peerResolution]);
-  const peerLikeValue = (peerLikeOverride !== undefined ? peerLikeOverride : (chat?.peerResolution?.like ?? null)) as
-    | boolean
-    | null;
+  /** Peer column: interactive star reflects our stored resolution (same field PUT /api/agent-chats/like writes). */
+  const agentResolutionLike = (chat?.agentResolution?.like ?? null) as boolean | null;
+  /** Your-agent column: peer-issued resolution from messages (read-only). */
+  const peerResolutionLike = (chat?.peerResolution?.like ?? null) as boolean | null;
 
-  useEffect(() => {
-    if (peerLikeOverride === undefined) return;
-    const chatLike = (chat?.peerResolution?.like ?? null) as boolean | null;
-    if (chatLike === peerLikeOverride) setPeerLikeOverride(undefined);
-  }, [peerLikeOverride, chat?.peerResolution]);
+  console.log("likes", { agentResolutionLike, peerResolutionLike });
 
   const performPeerLike = useCallback(
     async (next: boolean | null) => {
       if (!user || !agentDid || !peerDid) return;
-      setPeerLikeOverride(next);
+      setAgentResolutionLikeUpdating(true);
       setError(null);
       try {
         const idToken = await user.getIdToken();
@@ -316,10 +311,21 @@ export default function AgentChatsDetailPage({
           const text = await res.text();
           throw new Error(text || "Failed to update like");
         }
+        setChat((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            agentResolution: {
+              ...prev.agentResolution,
+              like: next,
+            },
+          };
+        });
       } catch (e) {
         console.error("Failed to update like:", e);
-        setPeerLikeOverride(undefined);
         setError(e instanceof Error ? e.message : "Failed to update like");
+      } finally {
+        setAgentResolutionLikeUpdating(false);
       }
     },
     [agentDid, peerDid, user],
@@ -480,8 +486,20 @@ export default function AgentChatsDetailPage({
             <Card className="border-zinc-800 bg-zinc-900/40">
               <div className="p-5 space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
-                  <AgentIdentity did={chat.agentDid} label="Your agent" liked={agentLiked} size="lg" />
-                  <AgentIdentity did={chat.peerDid} label="Peer agent" liked={peerLikeValue} size="lg" onToggleLike={performPeerLike} />
+                  <AgentIdentity
+                    did={chat.agentDid}
+                    label="Your agent"
+                    liked={peerResolutionLike}
+                    size="lg"
+                  />
+                  <AgentIdentity
+                    did={chat.peerDid}
+                    label="Peer agent"
+                    liked={agentResolutionLike}
+                    size="lg"
+                    onToggleLike={performPeerLike}
+                    likeUpdating={agentResolutionLikeUpdating}
+                  />
                 </div>
 
                 <div className="pt-3 border-t border-zinc-800 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
@@ -512,7 +530,45 @@ export default function AgentChatsDetailPage({
                       const label =
                         !userMsg && !agentMsg ? `Role ${String(m.role)}` : userMsg ? (peerDisplayName ?? "Peer") : "You";
                       const body = messageBody(m);
+                      const isEmptyBody = body.trim().length === 0;
                       const ts = formatMessageTime(messageTimestamp(m));
+                      const hasMeta =
+                        m.metadata &&
+                        typeof m.metadata === "object" &&
+                        Object.keys(m.metadata as object).length > 0;
+
+                      if (isEmptyBody) {
+                        return (
+                          <li key={i} className={clsx("flex w-full min-w-0", alignRight ? "justify-end" : "justify-start")}>
+                            <div className="w-4/5 max-w-[80%] min-w-0 flex flex-col gap-1">
+                              <div className={clsx("text-xs text-zinc-500", alignRight ? "text-right" : "text-left")}>
+                                {label}
+                              </div>
+                              <div
+                                className={clsx(
+                                  "flex flex-wrap items-center gap-x-3 gap-y-1",
+                                  alignRight ? "justify-end" : "justify-start",
+                                )}
+                              >
+                                {hasMeta ? (
+                                  <details
+                                    className={clsx("text-xs text-zinc-500", alignRight ? "text-right" : "text-left")}
+                                  >
+                                    <summary className="cursor-pointer select-none inline-block text-zinc-400 hover:text-zinc-300 underline underline-offset-2">
+                                      metadata
+                                    </summary>
+                                    <pre className="mt-1 p-2 bg-zinc-950/60 rounded border border-zinc-800 overflow-x-auto text-left text-[11px] text-zinc-300">
+                                      {JSON.stringify(m.metadata, null, 2)}
+                                    </pre>
+                                  </details>
+                                ) : null}
+                                {ts ? <span className="text-[11px] text-zinc-600">{ts}</span> : null}
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      }
+
                       return (
                         <li key={i} className={clsx("flex w-full min-w-0", alignRight ? "justify-end" : "justify-start")}>
                           <div className="w-4/5 max-w-[80%] min-w-0 flex flex-col gap-1">
@@ -529,87 +585,83 @@ export default function AgentChatsDetailPage({
                                     : "bg-gray-50",
                               )}
                             >
-                              {body ? (
-                                <div className="break-words">
-                                  <ReactMarkdown
-                                    remarkPlugins={[remarkGfm, remarkBreaks]}
-                                    components={{
-                                      a: ({ node, ...props }) => (
-                                        <a
-                                          {...props}
-                                          className="text-blue-700 underline underline-offset-2 hover:text-blue-800"
-                                          target="_blank"
-                                          rel="noreferrer"
-                                        />
-                                      ),
-                                      code: ({ node, className, children, ...props }) => {
-                                        const inline = !className;
-                                        return inline ? (
-                                          <code {...props} className="px-1 py-0.5 rounded bg-gray-200 text-black font-mono text-[0.95em]">
-                                            {children}
-                                          </code>
-                                        ) : (
-                                          <code {...props} className={clsx("text-black font-mono", className)}>
-                                            {children}
-                                          </code>
-                                        );
-                                      },
-                                      pre: ({ node, children, ...props }) => (
-                                        <pre
-                                          {...props}
-                                          className="mt-2 p-3 rounded-lg bg-white border border-gray-200 overflow-x-auto text-sm"
-                                        >
+                              <div className="break-words">
+                                <ReactMarkdown
+                                  remarkPlugins={[remarkGfm, remarkBreaks]}
+                                  components={{
+                                    a: ({ node, ...props }) => (
+                                      <a
+                                        {...props}
+                                        className="text-blue-700 underline underline-offset-2 hover:text-blue-800"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                      />
+                                    ),
+                                    code: ({ node, className, children, ...props }) => {
+                                      const inline = !className;
+                                      return inline ? (
+                                        <code {...props} className="px-1 py-0.5 rounded bg-gray-200 text-black font-mono text-[0.95em]">
                                           {children}
-                                        </pre>
-                                      ),
-                                      p: ({ node, children, ...props }) => (
-                                        <p {...props} className="whitespace-pre-wrap break-words [&:not(:first-child)]:mt-2">
+                                        </code>
+                                      ) : (
+                                        <code {...props} className={clsx("text-black font-mono", className)}>
                                           {children}
-                                        </p>
-                                      ),
-                                      ul: ({ node, children, ...props }) => (
-                                        <ul {...props} className="list-disc pl-5 [&:not(:first-child)]:mt-2">
-                                          {children}
-                                        </ul>
-                                      ),
-                                      ol: ({ node, children, ...props }) => (
-                                        <ol {...props} className="list-decimal pl-5 [&:not(:first-child)]:mt-2">
-                                          {children}
-                                        </ol>
-                                      ),
-                                      li: ({ node, children, ...props }) => (
-                                        <li {...props} className="mt-1">
-                                          {children}
-                                        </li>
-                                      ),
-                                      blockquote: ({ node, children, ...props }) => (
-                                        <blockquote {...props} className="border-l-4 border-gray-300 pl-3 text-gray-800 [&:not(:first-child)]:mt-2">
-                                          {children}
-                                        </blockquote>
-                                      ),
-                                      h1: ({ node, children, ...props }) => (
-                                        <h3 {...props} className="text-base font-semibold mt-3">
-                                          {children}
-                                        </h3>
-                                      ),
-                                      h2: ({ node, children, ...props }) => (
-                                        <h3 {...props} className="text-base font-semibold mt-3">
-                                          {children}
-                                        </h3>
-                                      ),
-                                      h3: ({ node, children, ...props }) => (
-                                        <h3 {...props} className="text-base font-semibold mt-3">
-                                          {children}
-                                        </h3>
-                                      ),
-                                    }}
-                                  >
-                                    {body}
-                                  </ReactMarkdown>
-                                </div>
-                              ) : (
-                                <div className="text-gray-600">(empty message)</div>
-                              )}
+                                        </code>
+                                      );
+                                    },
+                                    pre: ({ node, children, ...props }) => (
+                                      <pre
+                                        {...props}
+                                        className="mt-2 p-3 rounded-lg bg-white border border-gray-200 overflow-x-auto text-sm"
+                                      >
+                                        {children}
+                                      </pre>
+                                    ),
+                                    p: ({ node, children, ...props }) => (
+                                      <p {...props} className="whitespace-pre-wrap break-words [&:not(:first-child)]:mt-2">
+                                        {children}
+                                      </p>
+                                    ),
+                                    ul: ({ node, children, ...props }) => (
+                                      <ul {...props} className="list-disc pl-5 [&:not(:first-child)]:mt-2">
+                                        {children}
+                                      </ul>
+                                    ),
+                                    ol: ({ node, children, ...props }) => (
+                                      <ol {...props} className="list-decimal pl-5 [&:not(:first-child)]:mt-2">
+                                        {children}
+                                      </ol>
+                                    ),
+                                    li: ({ node, children, ...props }) => (
+                                      <li {...props} className="mt-1">
+                                        {children}
+                                      </li>
+                                    ),
+                                    blockquote: ({ node, children, ...props }) => (
+                                      <blockquote {...props} className="border-l-4 border-gray-300 pl-3 text-gray-800 [&:not(:first-child)]:mt-2">
+                                        {children}
+                                      </blockquote>
+                                    ),
+                                    h1: ({ node, children, ...props }) => (
+                                      <h3 {...props} className="text-base font-semibold mt-3">
+                                        {children}
+                                      </h3>
+                                    ),
+                                    h2: ({ node, children, ...props }) => (
+                                      <h3 {...props} className="text-base font-semibold mt-3">
+                                        {children}
+                                      </h3>
+                                    ),
+                                    h3: ({ node, children, ...props }) => (
+                                      <h3 {...props} className="text-base font-semibold mt-3">
+                                        {children}
+                                      </h3>
+                                    ),
+                                  }}
+                                >
+                                  {body}
+                                </ReactMarkdown>
+                              </div>
                               {ts ? (
                                 <div
                                   className={clsx(
@@ -621,9 +673,9 @@ export default function AgentChatsDetailPage({
                                 </div>
                               ) : null}
                             </div>
-                            {m.metadata && Object.keys(m.metadata).length > 0 ? (
+                            {hasMeta ? (
                               <details className={clsx("text-xs text-zinc-500", alignRight ? "text-right" : "text-left")}>
-                                <summary className="cursor-pointer select-none inline-block">Metadata</summary>
+                                <summary className="cursor-pointer select-none inline-block">metadata</summary>
                                 <pre className="mt-1 p-2 bg-zinc-950/60 rounded border border-zinc-800 overflow-x-auto text-left">
                                   {JSON.stringify(m.metadata, null, 2)}
                                 </pre>

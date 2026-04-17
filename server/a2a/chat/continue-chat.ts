@@ -97,6 +97,15 @@ export async function updateChat( params: UpdateChatParams ) {
         manageUrl: getChatDetailUrl( agentDid, peerDid )
     }, authContext, force );
 
+    // Persist resolution changes to Firestore. (generateReply already writes for continueChat;
+    // the like endpoint only passes chatUpdate here, and previously never hit the store.)
+    if (agentResolution !== undefined || peerResolution !== undefined) {
+        await agentChatsStore.update(uid, { agentDid, peerDid } as AgentPair, {
+            ...(agentResolution !== undefined ? { agentResolution } : {}),
+            ...(peerResolution !== undefined ? { peerResolution } : {}),
+        });
+    }
+
     //
     // send reply to peer
     //

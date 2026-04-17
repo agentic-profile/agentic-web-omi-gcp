@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
-import { Star } from "lucide-react";
+import { Loader2, Star } from "lucide-react";
 import { createDidResolver, parseDid } from "@agentic-profile/common";
 import { DIDLink } from "@/src/components/DIDLink";
 import UserImage from "@/src/components/UserImage";
@@ -35,12 +35,15 @@ export default function AgentIdentity({
   liked,
   size = "md",
   onToggleLike,
+  likeUpdating = false,
 }: {
   did: string;
   label: string;
   liked?: boolean | null;
   size?: "sm" | "md" | "lg";
   onToggleLike?: (next: boolean | null) => void | Promise<void>;
+  /** When true, shows a spinner instead of the star and ignores clicks. */
+  likeUpdating?: boolean;
 }) {
   const [doc, setDoc] = useState<AgenticProfileLike | null>(null);
   const [loading, setLoading] = useState(false);
@@ -100,18 +103,23 @@ export default function AgentIdentity({
                     "focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/60 rounded",
                   )}
                   onClick={() => {
-                    if (!starInteractive) return;
-                    const current = liked ?? null;
-                    const next = current === null ? true : current === true ? false : null;
+                    if (!starInteractive || likeUpdating) return;
+                    const current = liked === true ? true : null;
+                    const next = current === true ? null : true;
                     void onToggleLike(next);
                   }}
                   aria-label={liked === true ? "Resolution: like" : liked === false ? "Resolution: not like" : "Resolution: unset"}
-                  disabled={!starInteractive}
+                  aria-busy={likeUpdating}
+                  disabled={!starInteractive || likeUpdating}
                 >
-                  <Star
-                    size={starSize}
-                    className={clsx(liked === true ? "text-amber-500 fill-amber-500" : "text-zinc-600")}
-                  />
+                  {likeUpdating ? (
+                    <Loader2 size={starSize} className="animate-spin text-zinc-400" aria-hidden />
+                  ) : (
+                    <Star
+                      size={starSize}
+                      className={clsx(liked === true ? "text-amber-500 fill-amber-500" : "text-zinc-600")}
+                    />
+                  )}
                 </button>
               ) : null}
             </div>

@@ -109,7 +109,7 @@ export function registerAgentChatsEndpoints(app: Express) {
     }
 
     try {
-      return await updateChat({ 
+      await updateChat({ 
         uid,
         agentDid,
         peerDid,
@@ -122,14 +122,10 @@ export function registerAgentChatsEndpoints(app: Express) {
           resolution: {
             like,
           },
-        },
-        //replyText,
-        //messageCount,
-        //envelopeOptions,
-        //prevResolutions
+        }
       });
 
-      return res.status(204).send();
+      return res.json({ success: true });
     } catch(error) {
       console.error("[API] PUT /api/agent-chats/like", error);
       return res.status(500).json({ error: "Failed to update agent chat" });
