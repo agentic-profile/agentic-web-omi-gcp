@@ -16,9 +16,15 @@ service cloud.firestore {
     // Collection Rules
     // ===============================================================
 
-    // Accounts: Only the owner can read or write their own account document
+    // Accounts: Created only via Admin (server). Owner can read/update profile fields;
+    // credits and role cannot be changed from the client (server bypasses rules).
     match /accounts/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read: if isOwner(userId);
+      allow create: if false;
+      allow update: if isOwner(userId)
+        && request.resource.data.credits == resource.data.credits
+        && request.resource.data.role == resource.data.role;
+      allow delete: if false;
     }
 
     // Memories: Only the owner can read or delete their memories.

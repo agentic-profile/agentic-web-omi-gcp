@@ -3,3 +3,4 @@ allowBuilds:
   esbuild: true
   msw: true
   protobufjs: true
+  re2: true

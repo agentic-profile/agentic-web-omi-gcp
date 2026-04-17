@@ -9,8 +9,6 @@ import {
 } from '@agentic-profile/a2a-mcp-express';
 
 import { prettyJson, parseDid } from '@agentic-profile/common';
-//import { resolveMessageQueue } from "@/common/queue/index.js";
-import { resolveAgentsStore } from "../stores/agents/index.ts";
 import type { StartChatQueueMessage } from "../queue/types.js";
 import { resolveAgentChatsStore } from "../stores/agent-chats/index.js";
 import { AgentPair } from '../stores/agent-chats/types.js';
@@ -18,8 +16,6 @@ import { ensureAgentOwnerInGoodStanding } from './chat/misc.js';
 import { continueChat } from './chat/continue-chat.ts';
 import { manageChatUrl } from "../utils/http.js";
 
-//const messageQueue = resolveMessageQueue();
-const agentStore = resolveAgentsStore();
 const agentChatsStore = resolveAgentChatsStore();
 
 /**
@@ -47,10 +43,7 @@ export async function handleA2aCreateTask(jrpcRequest: JsonRpcRequest, {session,
         && parseDid(agentDid).did !== session.agentDid ) // for when entity owning the agent signs the token
         throw new Error(`User agentDid ${agentDid} does not match session agentDid ${session.agentDid}`);
 
-    const agent = await agentStore.readByDid( agentDid );
-    if( !agent )
-        throw new Error( `Agent not found for ${agentDid}` );
-    await ensureAgentOwnerInGoodStanding(agent);
+    const { uid } = await ensureAgentOwnerInGoodStanding(agentDid);
 
     // Has this chat already concluded on my part?
     const manageUrl = manageChatUrl(req);
@@ -75,7 +68,7 @@ export async function handleA2aCreateTask(jrpcRequest: JsonRpcRequest, {session,
     // TODO: maybe do the task immediately?
     const message: StartChatQueueMessage = {
         type: "start-chat",
-        uid: agent.uid,
+        uid,
         taskId: uuidv4(),
         agentDid,
         peerDid

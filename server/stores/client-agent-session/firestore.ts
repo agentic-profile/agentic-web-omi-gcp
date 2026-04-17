@@ -1,3 +1,4 @@
+import { ClientAgentSessionUpdate } from "@agentic-profile/auth";
 import { admin, adminDb, handleFirestoreError, OperationType } from "../../firebase.js";
 import { ClientAgentSessionStore } from "./types.js";
 
@@ -6,9 +7,13 @@ const COLLECTION = "client_agent_sessions";
 export class FirestoreClientAgentSessionStore implements ClientAgentSessionStore {
     private db = adminDb;
 
-    async create(session: any): Promise<any> {
+    async create(challenge: string): Promise<any> {
         try {
-            const docRef = await this.db.collection(COLLECTION).add(session);
+            // Firestore requires a plain object; createChallenge passes the secret string only.
+            const docRef = await this.db.collection(COLLECTION).add({
+                challenge,
+                created: admin.firestore.FieldValue.serverTimestamp(),
+            });
             return docRef.id;
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, COLLECTION);
@@ -27,9 +32,19 @@ export class FirestoreClientAgentSessionStore implements ClientAgentSessionStore
         }
     }
 
-    async update(id: string, session: any): Promise<boolean> {
+    async update(id: string, updates: ClientAgentSessionUpdate): Promise<boolean> {
         try {
-            await this.db.collection(COLLECTION).doc(id).update(session);
+            const docRef = this.db.collection(COLLECTION).doc(id);
+            const snap = await docRef.get();
+            if (!snap.exists) return false;
+
+            const payload: Partial<ClientAgentSessionUpdate> = {};
+            if (updates.agentDid !== undefined) payload.agentDid = updates.agentDid;
+            if (updates.authToken !== undefined) payload.authToken = updates.authToken;
+
+            if (Object.keys(payload).length === 0) return true;
+
+            await docRef.update(payload);
             return true;
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `${COLLECTION}/${id}`);

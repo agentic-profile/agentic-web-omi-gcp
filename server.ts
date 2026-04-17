@@ -16,6 +16,7 @@ import { registerChatEndpoints } from "./server/endpoints/apiChat.ts";
 import { registerOmiApiKeyEndpoints } from "./server/endpoints/omiApiKey.ts";
 import { registerOmiMemoryEndpoints } from "./server/endpoints/omiMemory.ts";
 import { registerPublishEndpoints } from "./server/endpoints/publish.ts";
+import { registerAccountEndpoints } from "./server/endpoints/account.ts";
 
 const didResolver = createDidResolver();
 
@@ -43,6 +44,7 @@ async function startServer() {
 
   // Register refactored endpoints
   registerWellKnownEndpoints(app);
+  registerAccountEndpoints(app);
   registerChatEndpoints(app, genAI);
   registerOmiApiKeyEndpoints(app);
   registerOmiMemoryEndpoints(app, genAI);

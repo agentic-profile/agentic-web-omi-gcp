@@ -21,7 +21,7 @@ export interface Account {
     chat_instruction?: string;
     introduction?: string;
     memory_summarize?: string;
-    did?: DID;
+    agentDid?: DID;
 }
 
 /*
@@ -40,7 +40,7 @@ export interface CreateAccountFields {
     chat_instruction?: string;
     introduction?: string;
     memory_summarize?: string;
-    did?: DID;
+    agentDid?: DID;
 }
 
 export interface UpdateAccountFields {
@@ -51,12 +51,12 @@ export interface UpdateAccountFields {
     chat_instruction?: string;
     introduction?: string;
     memory_summarize?: string;
-    did?: DID;
+    agentDid?: DID;
 }
 
 export interface AccountStore {
     createAccount( account: CreateAccountFields ): Promise<Account>;
-    readAccountByDid( did: DID ): Promise<Account | null>;
+    readAccountByAgentDid( did: DID ): Promise<Account | null>;
     readAccountByEmail( email: string ): Promise<Account | null>;
     readAccount( uid: UserID, fields?: string ): Promise<Account | null>;
     listAccounts(): Promise<Account[]>;

@@ -18,7 +18,6 @@ import { resolveSender, ensureAgentOwnerInGoodStanding } from './misc.js';
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 const agentChatsStore = resolveAgentChatsStore();
-//const agentStore = resolveAgentsStore();
 const accountStore = resolveAccountStore();
 
 export interface ReplyParams {
@@ -56,19 +55,7 @@ export async function generateReply({ envelope, peerDid, inboundMessage }: Reply
     const peerText = textPart?.text;
     const peerMetadata = inboundMessage?.metadata;
 
-    /* read my agent (who am I?) = toAgentDid (not the client)
-    const agent = await agentStore.readByDid( agentDid );
-    if( !agent )
-        throw new Error(`Agent profile not found for ${agentDid}`);
-    log.debug('Agent profile', agentDid, prettyJson(agent));
-    const { uid, account } = await ensureAgentOwnerInGoodStanding(agent);
-    */
-
-    const account = await accountStore.readAccountByDid( agentDid );
-    if( !account )
-        throw new Error(`Account not found for agent DID: ${agentDid}`);
-
-    const { uid } = account;
+    const { uid, account } = await ensureAgentOwnerInGoodStanding( agentDid );
 
     let a2aMessageHistory: Message[] = [];
     const prevResolutions: ChatResolutionPair = {};
@@ -125,7 +112,6 @@ export async function generateReply({ envelope, peerDid, inboundMessage }: Reply
         await accountStore.subtractCredit(account.uid, cost);
         agentReplyText = text;
     }
-
 
     // any JSON resolution?
     let metadata: MessageMetadata = {

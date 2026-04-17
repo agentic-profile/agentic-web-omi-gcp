@@ -22,9 +22,6 @@ import PublishPage from "./pages/publish/PublishPage";
 import SettingsPage from "./pages/SettingsPage";
 import ManagePage from "./pages/ManagePage";
 import { Settings, History, Home, LogIn, LogOut, Menu, X, ArrowLeftRight, Share2 } from "lucide-react";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { db } from "./firebase";
-
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,20 +30,17 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Ensure account document exists
         try {
-          const accountRef = doc(db, "accounts", user.uid);
-          const accountSnap = await getDoc(accountRef);
-          
-          if (!accountSnap.exists()) {
-            await setDoc(accountRef, {
-              name: user.displayName || "User",
-              pictureUrl: user.photoURL || "",
-              role: "user",
-              chat_instruction: "You are a helpful AI assistant with access to the user's conversation memories. Use the provided context to give personal and accurate answers.",
-              memory_summarize: "Summarize the following conversation into a concise memory for long-term storage.",
-              credits: 1.0
-            });
+          const idToken = await user.getIdToken();
+          const res = await fetch("/api/account/ensure", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${idToken}`,
+              "Content-Type": "application/json",
+            },
+          });
+          if (!res.ok) {
+            console.error("Account provisioning failed:", await res.text());
           }
         } catch (error) {
           console.error("Account initialization failed:", error);

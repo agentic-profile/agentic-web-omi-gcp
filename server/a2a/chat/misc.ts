@@ -1,5 +1,4 @@
 import { DID, parseDid } from '@agentic-profile/common';
-import { Agent } from '../../stores/agents/types.js';
 import { resolveAccountStore } from "../../stores/accounts/index.ts";
 import log from "../../utils/log.js";
 
@@ -24,16 +23,16 @@ export function resolveSender( from: DID | undefined, peerDid: DID ): DID {
     throw new Error(`Message envelope 'from' value ${from} does not match authenticated agentDid: ${peerDid}`);
 }
 
-export async function ensureAgentOwnerInGoodStanding( agent: Agent ) {
-    const account = await accountStore.readAccount(agent.uid);
+export async function ensureAgentOwnerInGoodStanding( agentDid: DID ) {
+    const account = await accountStore.readAccountByAgentDid( agentDid );
     if( !account )
-        throw new Error(`Account not found for ${agent.uid}`);
+        throw new Error(`Account not found for ${agentDid}`);
     const { uid, name, credits } = account;
     //if( disabled_by )
     //    throw new Error(`Agent owner ${agent.uid} account is disabled`);
     if( credits <= 0 ) {
         log.warn(`Agent owners account has insufficient credit`);
-        throw new Error(`Agent ${agent.agentDid} owner ${agent.uid} has insufficient credit`);
+        throw new Error(`Agent ${agentDid} owner ${uid} has insufficient credit`);
     }
 
     return { uid, name, credits, account };
