@@ -119,6 +119,7 @@ export function registerAgentChatsEndpoints(app: Express) {
           },
         },
         replyMetadata: {
+          timestamp: new Date().toISOString(),
           resolution: {
             like,
           },
