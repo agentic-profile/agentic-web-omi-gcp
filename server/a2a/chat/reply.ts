@@ -11,7 +11,7 @@ import type { AgentMessageEnvelope } from '@agentic-profile/a2a-mcp-express';
 import { createSystemPrompt } from '../../a2a/chat/prompt-templates.js';
 import { resolveAgentChatsStore } from "../../stores/agent-chats/index.js";
 import { resolveAccountStore } from "../../stores/accounts/index.js";
-import { resolveSender, ensureAgentOwnerInGoodStanding, textToParts } from './misc.js';
+import { resolveSender, ensureAgentOwnerInGoodStanding, textToParts, partsToText } from './misc.js';
 import { computeTokenCost, UsageMetadata } from './cost.js';
 
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
@@ -24,6 +24,7 @@ export interface ReplyParams {
     envelope: AgentMessageEnvelope;
     peerDid: DID;  // source of message, who was authenticated
     inboundMessage?: Message;
+    altPrompt?: string; // if there's no inbound message but we want to generate a reply, provide this altPrompt for chat completion
 }
 
 export interface ChatResolutionPair {
@@ -46,8 +47,9 @@ export interface ReplyResult {
 // - They simply sent a "rewind"
 // - They sent a text message I should respond to
 // - They sent a metadata.resolution I should update
+// - OR I'm asked (via altPrompt) to say something "interesting" to kick off a chat turn
 // - Any combination of the above(!)
-export async function generateReply({ envelope, peerDid, inboundMessage }: ReplyParams): Promise<ReplyResult> {
+export async function generateReply({ envelope, peerDid, inboundMessage, altPrompt }: ReplyParams): Promise<ReplyResult> {
     const { to: agentDid, rewind } = envelope;
     const { uid, account } = await ensureAgentOwnerInGoodStanding( agentDid );
 
@@ -60,9 +62,8 @@ export async function generateReply({ envelope, peerDid, inboundMessage }: Reply
     peerDid = resolveSender( envelope.from, peerDid ); // in-case the peer is encoded in the envelope
     const chatId: AgentPair = { agentDid, peerDid };   // agentDid is my agent, peer is remote
 
-    // currently only supports/records the first text part found
-    const textPart: Part | undefined = inboundMessage?.parts?.find((part: Part) => "text" in part);
-    const peerText = textPart?.text?.trim(); // might be undefined when no text message from user
+    // anything coming in?  These might both be undefined...
+    const peerText = partsToText( inboundMessage?.parts );
     const peerMetadata = inboundMessage?.metadata;
 
     //
@@ -91,10 +92,10 @@ export async function generateReply({ envelope, peerDid, inboundMessage }: Reply
         replyMetadata = {
             timestamp: new Date().toISOString()
         };
-    } else if( peerText ) {
+    } else if( peerText || altPrompt ) {
         // They sent a message and I should respond
         const systemInstruction = createSystemPrompt( account );
-        const { text, cost } = await chatCompletion( systemInstruction, a2aMessageHistory, peerText );
+        const { text, cost } = await chatCompletion( systemInstruction, a2aMessageHistory, peerText || altPrompt );
         replyText = text;
 
         // Make sure they pay for inference
@@ -116,13 +117,13 @@ export async function generateReply({ envelope, peerDid, inboundMessage }: Reply
             }
         });
     } else {
-        // they did NOT send a text message... maybe they update a metadata.resolution?
+        // they did NOT send a text message... maybe they update a metadata.resolution? (handled below...)
     }
 
     if( peerText || peerMetadata?.resolution )
-        chatUpdate.messages!.push({ role: "ROLE_USER", parts: textToParts(peerText), metadata: peerMetadata } as Message);
+        chatUpdate.messages.push({ role: "ROLE_USER", parts: textToParts(peerText), metadata: peerMetadata } as Message);
     if( replyText || replyMetadata?.resolution )
-        chatUpdate.messages!.push({ role: "ROLE_AGENT", parts: textToParts(replyText), metadata: replyMetadata } as Message);
+        chatUpdate.messages.push({ role: "ROLE_AGENT", parts: textToParts(replyText), metadata: replyMetadata } as Message);
 
     // Revise the chatUpdate with any new resolutions from the message
     updateResolutions( chatUpdate );

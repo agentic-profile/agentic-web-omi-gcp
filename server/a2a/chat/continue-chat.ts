@@ -37,7 +37,8 @@ export async function continueChat( params: ContinueChatParams ): Promise<Contin
     const { uid, agentDid, peerDid, envelopeOptions } = params;
 
     //
-    // generate our agent's reply (ok when there is no inbound message)
+    // generate our agent's reply
+    // (ok when there is no inbound message, but we can provide an altPrompt to kick off the chat turn)
     //
     const result = await generateReply({
         envelope: {
@@ -45,9 +46,11 @@ export async function continueChat( params: ContinueChatParams ): Promise<Contin
             from: peerDid,
             ...envelopeOptions
         },
-        peerDid
+        peerDid,
+        altPrompt: "Tell me about another synergy of ours that we haven't discussed yet"
     });
 
+    // We are guaranteed to have a chat reply from the above, so ok to update chat
     return await updateChat({ 
         uid, agentDid, peerDid,
         ...result
@@ -121,7 +124,7 @@ export async function updateChat( params: UpdateChatParams ) {
     const { message, task } = (data as any)?.result ?? {};
     let userMessage: Message | undefined;
     if( message ) {
-        log.info( 'continueChat() sent reply, and received message from peer', truncate(prettyJson(message),200));
+        log.info( 'updateChat() sent reply, and received message from peer', truncate(prettyJson(message),200));
         userMessage = {
             role: "ROLE_USER",
             parts: message.parts,

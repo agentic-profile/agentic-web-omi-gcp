@@ -86,7 +86,7 @@ export function registerAgentChatsEndpoints(app: Express) {
         envelopeOptions: {
           posthaste: true,
           ...(rewind ? { rewind: true } : {}),
-        },
+        }
       });
 
       return res.json({ messages: result.messages });
@@ -118,12 +118,12 @@ export function registerAgentChatsEndpoints(app: Express) {
             like,
           },
         },
-        metadata: {
+        replyMetadata: {
           resolution: {
             like,
           },
         },
-        //agentReplyText,
+        //replyText,
         //messageCount,
         //envelopeOptions,
         //prevResolutions

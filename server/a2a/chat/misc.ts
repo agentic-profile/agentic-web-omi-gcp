@@ -64,3 +64,8 @@ export function textToParts( text: string ): Part[] {
     else
        return [{ text }];
 }
+
+export function partsToText( parts: Part[] | undefined ): string | undefined{
+    const text = parts?.map((part:any) => "text" in part ? part.text : undefined).filter(Boolean).join('\n\n').trim();
+    return text || undefined;
+}
