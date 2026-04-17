@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import type { User } from "firebase/auth";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { Loader2, RefreshCw } from "lucide-react";
 import { Card } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
 import { LoginModal } from "@/src/components/LoginModal";
 import { DIDLink } from "@/src/components/DIDLink";
+import { db } from "@/src/firebase";
 
 type ChatResolution = {
   like?: boolean | null;
@@ -62,28 +64,7 @@ export default function AgentChatsPage({
   }, [chats]);
 
   const loadChats = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const token = await user.getIdToken();
-      const res = await fetch("/api/agent-chats", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(text || `Request failed (${res.status})`);
-      }
-      const data = (await res.json()) as { chats?: AgentChatRecord[] };
-      setChats(Array.isArray(data.chats) ? data.chats : []);
-    } catch (e) {
-      setChats([]);
-      setError(e instanceof Error ? e.message : "Failed to load agent chats");
-    } finally {
-      setLoading(false);
-    }
+    // No-op: this page is driven by a Firestore subscription.
   }, [user]);
 
   useEffect(() => {
@@ -93,8 +74,25 @@ export default function AgentChatsPage({
       setLoading(false);
       return;
     }
-    void loadChats();
-  }, [user, loadChats]);
+    setLoading(true);
+    setError(null);
+    const q = query(collection(db, "agent_chats"), where("uid", "==", user.uid));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const docs = snapshot.docs.map((d) => d.data()) as AgentChatRecord[];
+        setChats(docs);
+        setLoading(false);
+      },
+      (err) => {
+        console.error("Firestore error:", err);
+        setChats([]);
+        setError(err instanceof Error ? err.message : "Failed to load agent chats");
+        setLoading(false);
+      },
+    );
+    return () => unsubscribe();
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -108,8 +106,8 @@ export default function AgentChatsPage({
           </div>
           <Button
             variant="ghost"
-            onClick={() => void loadChats()}
-            disabled={!user || loading}
+            onClick={() => {}}
+            disabled
             className="gap-2 text-zinc-300 hover:text-white hover:bg-zinc-800"
           >
             {loading ? <Loader2 className="animate-spin" size={16} /> : <RefreshCw size={16} />}
@@ -137,7 +135,7 @@ export default function AgentChatsPage({
               <div className="font-semibold text-red-200 mb-1">Failed to load chats</div>
               <div className="text-sm text-red-200/70 break-words">{error}</div>
               <div className="mt-4">
-                <Button variant="secondary" onClick={() => void loadChats()} disabled={loading}>
+                <Button variant="secondary" onClick={() => window.location.reload()} disabled={loading}>
                   Try again
                 </Button>
               </div>

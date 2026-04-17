@@ -23,7 +23,7 @@ import SettingsPage from "./pages/SettingsPage";
 import ManagePage from "./pages/ManagePage";
 import { Settings, History, Home, LogIn, LogOut, Menu, X, ArrowLeftRight, Share2 } from "lucide-react";
 import AgentChatsPage from "./pages/chat/AgentChatsPage";
-import AgentChatsDetailRoutePage from "./pages/chat/AgentChatsDetailRoutePage";
+import AgentChatsDetailPage from "./pages/chat/AgentChatsDetailPage";
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -141,7 +141,7 @@ export default function App() {
             <Route path="/publish" element={user ? <PublishPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/more" element={user ? <MorePage /> : <LandingPage user={user} login={login} />} />
             <Route path="/agent-chats" element={<AgentChatsPage user={user} login={login} />} />
-            <Route path="/agent-chats/detail" element={<AgentChatsDetailRoutePage user={user} login={login} />} />
+            <Route path="/agent-chats/detail" element={<AgentChatsDetailPage user={user} login={login} />} />
             <Route path="/manage" element={<ManagePage user={user} login={login} />} />
             <Route path="/account" element={user ? <MyAccountPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/edit-prompts" element={user ? <EditPromptsPage user={user} /> : <LandingPage user={user} login={login} />} />

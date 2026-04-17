@@ -49,6 +49,15 @@ service cloud.firestore {
       allow create: if isOwner(request.resource.data.userId);
     }
 
+    // Agent chats: Only the owner (uid) can access.
+    // Stored with uid as a string (server store also normalizes uid to string).
+    match /agent_chats/{chatId} {
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+
     // Default deny: Block all other access
     match /{document=**} {
       allow read, write: if false;

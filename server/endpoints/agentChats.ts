@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { authenticate } from "../middleware.ts";
 import { resolveAgentChatsStore } from "../stores/agent-chats/index.ts";
+import { continueChat } from "../a2a/chat/continue-chat.ts";
+import { ensureAgentOwnerInGoodStanding } from "../a2a/chat/misc.ts";
 
 export function registerAgentChatsEndpoints(app: Express) {
   app.get("/api/agent-chats", authenticate, async (req: any, res) => {
@@ -52,6 +54,39 @@ export function registerAgentChatsEndpoints(app: Express) {
     } catch (e) {
       console.error("[API] DELETE /api/agent-chats", e);
       res.status(500).json({ error: "Failed to delete agent chat" });
+    }
+  });
+
+  app.post("/api/agent-chats/continue", authenticate, async (req: any, res) => {
+    const uid = req.user.uid as string;
+    const agentDid = String(req.body?.agentDid ?? "");
+    const peerDid = String(req.body?.peerDid ?? "");
+    const rewind = Boolean(req.body?.rewind ?? false);
+
+    if (!agentDid || !peerDid) {
+      return res.status(400).json({ error: "agentDid and peerDid are required" });
+    }
+
+    try {
+      const owner = await ensureAgentOwnerInGoodStanding(agentDid);
+      if (String(owner.uid) !== String(uid)) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      const result = await continueChat({
+        uid,
+        agentDid,
+        peerDid,
+        envelopeOptions: {
+          posthaste: true,
+          ...(rewind ? { rewind: true } : {}),
+        },
+      });
+
+      return res.json({ messages: result.messages });
+    } catch (e) {
+      console.error("[API] POST /api/agent-chats/continue", e);
+      return res.status(500).json({ error: "Failed to continue agent chat" });
     }
   });
 }
