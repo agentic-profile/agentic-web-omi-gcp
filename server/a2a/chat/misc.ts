@@ -3,6 +3,7 @@ import { resolveAccountStore } from "../../stores/accounts/index.ts";
 import log from "../../utils/log.js";
 import { appUrl } from '../../utils/http.js';
 import { Request } from 'express';
+import { Part } from '@/server/stores/agent-chats/types.ts';
 
 const accountStore = resolveAccountStore();
 
@@ -54,4 +55,12 @@ export function getChatDetailUrl( agentDid: DID, peerDid: DID ): string | undefi
 
 export function manageChatUrl( req: Request ) {
     return `${appUrl(req).url}/manage/chat`;
+}
+
+export function textToParts( text: string ): Part[] {
+    text = text?.trim();
+    if( !text )
+        return [];
+    else
+       return [{ text }];
 }

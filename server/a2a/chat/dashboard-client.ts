@@ -35,6 +35,8 @@ export interface UpdateDashboardPayload {
 }
 
 export async function updateDashboard( prevResolutions: ChatResolutionPair, chat: DashboardChatUpdate, authContext: AuthContext, force: boolean = true ): Promise<ChatResolutionPair> {    
+    log.info( 'updateDashboard()', prettyJson({prevResolutions, chat, force}) );
+    
     // sanity
     if( chat.agentDid !== authContext.agentDid )
         throw new Error( `updateDashboard() agentDid mismatch: ${chat.agentDid} !== ${authContext.agentDid}` );

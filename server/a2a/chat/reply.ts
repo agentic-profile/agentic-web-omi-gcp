@@ -11,7 +11,7 @@ import type { AgentMessageEnvelope } from '@agentic-profile/a2a-mcp-express';
 import { createSystemPrompt } from '../../a2a/chat/prompt-templates.js';
 import { resolveAgentChatsStore } from "../../stores/agent-chats/index.js";
 import { resolveAccountStore } from "../../stores/accounts/index.js";
-import { resolveSender, ensureAgentOwnerInGoodStanding } from './misc.js';
+import { resolveSender, ensureAgentOwnerInGoodStanding, textToParts } from './misc.js';
 import { computeTokenCost, UsageMetadata } from './cost.js';
 
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
@@ -32,30 +32,42 @@ export interface ChatResolutionPair {
 }
 
 export interface ReplyResult {
-    agentReplyText: string;
-    metadata: MessageMetadata;
+    prevResolutions: ChatResolutionPair;  // prior resolutions as stored in DB
+
     chatUpdate: UpdateAgentChatParams;
-    prev: ChatResolutionPair;
-    messageCount: number;
+
+    // easy accessors, mirrors what's in chatUpdate
+    replyText: string;                // The reply text we added to chatUpdate.messages
+    replyMetadata: MessageMetadata;   // the reply/generated metadata we added to the reply chatUpdate message
+    messageCount: number;             // final message count
 }
 
+// This also handles several cases:
+// - They simply sent a "rewind"
+// - They sent a text message I should respond to
+// - They sent a metadata.resolution I should update
+// - Any combination of the above(!)
 export async function generateReply({ envelope, peerDid, inboundMessage }: ReplyParams): Promise<ReplyResult> {
-
     const { to: agentDid, rewind } = envelope;
+    const { uid, account } = await ensureAgentOwnerInGoodStanding( agentDid );
+
+    // start tracking the chat updates/changes
+    // This is the consolidated answer
     const chatUpdate: UpdateAgentChatParams = { messages: [] };
     if( rewind )
         chatUpdate.rewind = rewind;
-    peerDid = resolveSender( envelope.from, peerDid );
 
-    const chatId: AgentPair = { agentDid, peerDid };  // peer is remote
+    peerDid = resolveSender( envelope.from, peerDid ); // in-case the peer is encoded in the envelope
+    const chatId: AgentPair = { agentDid, peerDid };   // agentDid is my agent, peer is remote
 
     // currently only supports/records the first text part found
     const textPart: Part | undefined = inboundMessage?.parts?.find((part: Part) => "text" in part);
-    const peerText = textPart?.text?.trim();
+    const peerText = textPart?.text?.trim(); // might be undefined when no text message from user
     const peerMetadata = inboundMessage?.metadata;
 
-    const { uid, account } = await ensureAgentOwnerInGoodStanding( agentDid );
-
+    //
+    // What was the previous state of the resolutions?
+    //
     let a2aMessageHistory: Message[] = [];
     const prevResolutions: ChatResolutionPair = {};
     if( rewind ) {
@@ -69,67 +81,65 @@ export async function generateReply({ envelope, peerDid, inboundMessage }: Reply
         a2aMessageHistory = messages ?? [];
         prevResolutions.agentResolution = agentResolution;
         prevResolutions.peerResolution = peerResolution;
-        log.debug('Fetch message history:', a2aMessageHistory);
     }
-    let messageCount = a2aMessageHistory.length;
 
-    let agentReplyText;
+    let replyMetadata: MessageMetadata;
+    let replyText: string;
     if( !a2aMessageHistory.find(m => m.role === "ROLE_AGENT") ) {
         // No message from me/agent, so introduce myself...
-        log.info(
-            'generateReply() found no message from me/agent, so introducing myself.  Roles:',
-            a2aMessageHistory.map(m => m.role).join(', ')
-        );
-        agentReplyText = `Hello!  A quick summary of what I'm doing...\n\n${account.introduction}`;
-    } else {
-        //if( peerText )
-        //    a2aMessageHistory.push({ role: "ROLE_USER", parts:[{ text:peerText }]});
-
-        // Fallback for when I've already introduced myself and this is a cold start
-        const message = peerText ?? "Ask me a question about anything I have shared about myself.";
-
+        replyText = `Hello!  A quick summary of what I'm doing...\n\n${account.introduction}`;
+        replyMetadata = {
+            timestamp: new Date().toISOString()
+        };
+    } else if( peerText ) {
+        // They sent a message and I should respond
         const systemInstruction = createSystemPrompt( account );
-        const { text, cost } = await chatCompletion( systemInstruction, a2aMessageHistory, message );
+        const { text, cost } = await chatCompletion( systemInstruction, a2aMessageHistory, peerText );
+        replyText = text;
 
+        // Make sure they pay for inference
         await accountStore.subtractCredit(account.uid, cost);
-        agentReplyText = text;
+
+        // any JSON resolution?
+        const { jsonObjects, textWithoutJson } = extractJson(replyText);
+        jsonObjects?.forEach((json: any) => {
+            if( json.metadata?.resolution ) {
+                replyMetadata = {
+                    ...json.metadata,
+                    timestamp: new Date().toISOString()
+                };
+                chatUpdate.agentResolution = replyMetadata.resolution;
+                replyText = textWithoutJson; // remove the JSON object from the reply text
+                log.debug('Found JSON object in agent response with resolution:', prettyJson(json));
+            } else {
+                log.info('Found JSON object in agent response, but no resolution:', prettyJson(json));
+            }
+        });
+    } else {
+        // they did NOT send a text message... maybe they update a metadata.resolution?
     }
 
-    // any JSON resolution?
-    let metadata: MessageMetadata = {
-        timestamp: new Date().toISOString()
-    }
-    const { jsonObjects, textWithoutJson } = extractJson(agentReplyText);
-    jsonObjects?.forEach((json: any) => {
-        log.debug('Found JSON object in agent response:', json);
-        if( json.metadata?.resolution ) {
-            metadata = { ...metadata, ...json.metadata };
-            chatUpdate.agentResolution = metadata.resolution;
-            agentReplyText = textWithoutJson;
-        }
-    });
+    if( peerText || peerMetadata?.resolution )
+        chatUpdate.messages!.push({ role: "ROLE_USER", parts: textToParts(peerText), metadata: peerMetadata } as Message);
+    if( replyText || replyMetadata?.resolution )
+        chatUpdate.messages!.push({ role: "ROLE_AGENT", parts: textToParts(replyText), metadata: replyMetadata } as Message);
 
-    if( peerText )
-        chatUpdate.messages!.push({ role: "ROLE_USER", parts: [{ text: peerText }], metadata: peerMetadata } as Message);
-    chatUpdate.messages!.push({ role: "ROLE_AGENT", parts: [{ text: agentReplyText }], metadata } as Message);
-    messageCount += chatUpdate.messages!.length;
-
-    // Update the chat history with any new resolutions
-    updateResolutions( chatUpdate, chatUpdate.messages! );
+    // Revise the chatUpdate with any new resolutions from the message
+    updateResolutions( chatUpdate );
     await agentChatsStore.update(uid, chatId, chatUpdate);
 
     return {
-        agentReplyText,
-        metadata,
+        replyText,
+        replyMetadata,
         chatUpdate,
-        prev: prevResolutions,
-        messageCount
-    }
+        prevResolutions,
+        messageCount: a2aMessageHistory.length + chatUpdate.messages!.length
+    };
 }
 
-function updateResolutions( chatUpdate: UpdateAgentChatParams, messages: Message[] ) {
-    log.info(`updateResolutions() updating resolutions for ${messages.length} messages from agent:${chatUpdate.agentResolution} peer:${chatUpdate.peerResolution}`);
-    for( const { role, metadata } of messages ) {
+function updateResolutions( chatUpdate: UpdateAgentChatParams ) {
+    log.info(`updateResolutions() ${prettyJson({chatUpdate})}`);
+    for( const { role, metadata } of chatUpdate.messages ?? [] ) {
         if( metadata?.resolution ) {
             log.info(`found new resolution for ${role}: ${prettyJson(metadata.resolution)}`);
             if( role === "ROLE_AGENT" )
@@ -139,7 +149,11 @@ function updateResolutions( chatUpdate: UpdateAgentChatParams, messages: Message
         }
     }
 
-    log.info(`updateResolutions() updated resolutions to agent:${chatUpdate.agentResolution} peer:${chatUpdate.peerResolution}`);
+    const resolutions = {
+        agentResolution: chatUpdate.agentResolution,
+        peerResolution: chatUpdate.peerResolution
+    };
+    log.info(`updateResolutions() updated resolutions ${prettyJson({resolutions})}`);
 }
 
 async function chatCompletion( systemInstruction: string, a2aHistory: Message[], message: string ) {

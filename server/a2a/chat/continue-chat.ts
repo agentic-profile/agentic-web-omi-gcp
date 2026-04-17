@@ -10,9 +10,8 @@ import log from '../../utils/log.js';
 import { resolveAgentChatsStore } from '../../stores/agent-chats/index.js';
 import { AgentPair, Message, MessageMetadata } from '../../stores/agent-chats/types.js';
 import { updateDashboard } from './dashboard-client.js';
-import { getChatDetailUrl } from './misc.js';
+import { getChatDetailUrl, textToParts } from './misc.js';
 import { UpdateAgentChatParams } from '../../stores/agent-chats/types.js';
-import { ReplyResult } from './reply.js';
 
 
 const agentChatsStore = resolveAgentChatsStore();
@@ -33,11 +32,14 @@ export interface ContinueChatResult {
     messages: Message[];
 }
 
-export async function continueChat( { uid, agentDid, peerDid, envelopeOptions = {} }: ContinueChatParams ): Promise<ContinueChatResult> {
+export async function continueChat( params: ContinueChatParams ): Promise<ContinueChatResult> {
+    log.info( 'continueChat()', prettyJson(params) );
+    const { uid, agentDid, peerDid, envelopeOptions } = params;
+
     //
-    // generate our agent's reply (when there is no inbound message)
+    // generate our agent's reply (ok when there is no inbound message)
     //
-    const { agentReplyText, metadata, chatUpdate, messageCount, ...replyResult } = await generateReply({
+    const result = await generateReply({
         envelope: {
             to: agentDid, // to me
             from: peerDid,
@@ -46,19 +48,9 @@ export async function continueChat( { uid, agentDid, peerDid, envelopeOptions = 
         peerDid
     });
 
-    const { agentResolution, peerResolution } = chatUpdate;
-    log.debug( 'continueChat() generated reply', prettyJson({
-        agentReplyText: truncate(agentReplyText),
-        metadata,
-        prev: replyResult.prev,
-        agentResolution,
-        peerResolution,
-        messageCount
-    }) );
-
     return await updateChat({ 
-        uid, agentDid, peerDid, chatUpdate, agentReplyText,
-        messageCount, metadata, envelopeOptions, prevResolutions: replyResult.prev
+        uid, agentDid, peerDid,
+        ...result
     });
 }
 
@@ -66,17 +58,24 @@ interface UpdateChatParams {
     uid: UserID;
     agentDid: DID;
     peerDid: DID;
-    chatUpdate: UpdateAgentChatParams;
-    agentReplyText?: string;
-    messageCount?: number;
-    metadata?: MessageMetadata;
-    envelopeOptions?: EnvelopeOptions;
+
     prevResolutions?: ChatResolutionPair;
+
+    chatUpdate: UpdateAgentChatParams;
+    replyText?: string;
+    replyMetadata?: MessageMetadata;
+    messageCount?: number;
+
+    envelopeOptions?: EnvelopeOptions;
 }
 
-export async function updateChat({
-    uid, agentDid, peerDid, chatUpdate, agentReplyText,
-    messageCount, metadata, envelopeOptions = {}, prevResolutions = {}}: UpdateChatParams ) {
+export async function updateChat( params: UpdateChatParams ) {
+    log.info( 'updateChat()', prettyJson(params) );
+    const {
+        uid, agentDid, peerDid,
+        chatUpdate, replyText, replyMetadata, messageCount, 
+        envelopeOptions = {}, prevResolutions = {}
+    } = params;
 
     // if there are new resolutions, then update the dashboard
     const authContext: AuthContext = {
@@ -99,12 +98,12 @@ export async function updateChat({
     // send reply to peer
     //
     const { serviceUrl } = await resolveAgent(agentDid);
-    const parts = agentReplyText ? [{ text: agentReplyText }] : [];
+    const parts = textToParts(replyText);
     const agentMessage = {
         role: "ROLE_USER", // <= temporary, while we send to peer
         parts,
         metadata: {
-            ...metadata,
+            ...replyMetadata,
             envelope: {
                 to: peerDid, // reply to them
                 ...envelopeOptions

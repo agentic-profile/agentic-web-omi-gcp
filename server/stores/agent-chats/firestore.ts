@@ -1,7 +1,8 @@
 import { adminDb, handleFirestoreError, OperationType } from "../../firebase.js";
-import type { UserID } from "@agentic-profile/common";
+import { type UserID, prettyJson } from "@agentic-profile/common";
 import type { AgentChat, AgentChatsStore, AgentPair, UpdateAgentChatParams } from "./types.js";
 import { applyAgentChatUpdate, mergeWithAgentPair } from "./apply-agent-chat-update.js";
+import log from "@/server/utils/log.js";
 
 const COLLECTION = "agent_chats";
 
@@ -25,6 +26,7 @@ export class FirestoreAgentChatsStore implements AgentChatsStore {
   }
 
   async update(uid: UserID, agentPair: AgentPair, params: UpdateAgentChatParams): Promise<void> {
+    log.info( 'FirestoreAgentChatsStore.update()', prettyJson({uid, agentPair, params}) );
     const key = agentPairToKey(agentPair);
     try {
       const docRef = this.db.collection(COLLECTION).doc(key);

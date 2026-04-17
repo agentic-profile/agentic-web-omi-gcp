@@ -15,7 +15,7 @@ import { createProfileResolver } from '../utils/auth.js';
 import { createInMemoryAuthTokenCache } from '@agentic-profile/a2a-mcp-express';
 import { updateDashboard } from './chat/dashboard-client.js';
 import { generateReply } from './chat/reply.js';
-import { getChatDetailUrl } from './chat/misc.js';
+import { getChatDetailUrl, textToParts } from './chat/misc.js';
 
 /**
  * Handle an A2A SendMessage request.  This will process the message and return either
@@ -26,6 +26,7 @@ import { getChatDetailUrl } from './chat/misc.js';
  * @returns 
  */
 export async function handleA2aSendMessage(jrpcRequest: JsonRpcRequest, {session}: JsonRpcRequestContext): Promise<JsonRpcResponse> {
+    log.info( 'handleA2aSendMessage()', prettyJson({jrpcRequest, session}) );
     if( !session )
         return jrpcErrorAuthRequired( jrpcRequest.id! );
 
@@ -34,15 +35,13 @@ export async function handleA2aSendMessage(jrpcRequest: JsonRpcRequest, {session
     const envelope = resolveEnvelope(jrpcRequest);
 
     // TODO: if we are swamped, then defer the reply to a later time and return a task...
-    const { agentReplyText, metadata, chatUpdate, ...replyResult } = await generateReply({
+    const replyResult = await generateReply({
         envelope,
         peerDid,
         inboundMessage
     });
-    log.info(
-        'handleA2aSendMessage() generated reply',
-        prettyJson({ envelope, agentReplyText: truncate(agentReplyText), metadata })
-    );
+    log.info('handleA2aSendMessage() generated reply',prettyJson(replyResult));
+    const { replyText, replyMetadata, chatUpdate, prevResolutions } = replyResult;
 
     // update the dashboard with the new messages
     const { to: agentDid } = envelope;
@@ -52,7 +51,7 @@ export async function handleA2aSendMessage(jrpcRequest: JsonRpcRequest, {session
         authTokenCache: createInMemoryAuthTokenCache()
     };
 
-    await updateDashboard( replyResult.prev, {
+    await updateDashboard( prevResolutions, {
         agentDid,
         peerDid,
         messages: chatUpdate.messages,
@@ -66,13 +65,8 @@ export async function handleA2aSendMessage(jrpcRequest: JsonRpcRequest, {session
             contextId: `${envelope.to}^${peerDid}`,
             messageId: uuidv4(),
             role: "ROLE_AGENT",
-            parts: [
-                {
-                    text: agentReplyText,
-                    mediaType: "text/plain"
-                }
-            ],
-            metadata
+            parts: textToParts(replyText),
+            metadata: replyMetadata
         }
     });
 }

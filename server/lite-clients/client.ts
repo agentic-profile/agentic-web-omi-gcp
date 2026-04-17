@@ -4,6 +4,8 @@ import { AgenticChallenge } from "@agentic-profile/auth";
 import { generateAuthToken } from "@agentic-profile/auth";
 import { fetchJsonRpc } from "@agentic-profile/a2a-mcp-express";
 import { ProfileResolver } from "../utils/auth.js";
+import { prettyJson } from "@agentic-profile/common";
+import log from "../utils/log.js";
 
 export interface AuthContext {
     agentDid: string; // client agent DID; may include fragment (e.g. "#presence") OR represent the controlling entity (user, business, or gov agency)
@@ -32,6 +34,7 @@ export async function liteFetch<T extends RpcBody>( url: string, request: T, aut
     requestInit.headers = new Headers( requestInit.headers ?? {} );
     requestInit.headers.set('Accept', 'application/json');  // text/event-stream is NOT supported by this client
 
+    log.info( 'liteFetch()', prettyJson({url, request, requestInit}) );
     const fetchResult = await fetchJsonRpc(
         url,
         request,
