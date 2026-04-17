@@ -15,7 +15,3 @@ export function appUrl( req: Request ): AppUrlResult {
     const url = process.env.APP_URL || `${protocol}://${host}`;
     return { host, url };
 }
-
-export function manageChatUrl( req: Request ) {
-    return `${appUrl(req).url}/manage/chat`;
-}

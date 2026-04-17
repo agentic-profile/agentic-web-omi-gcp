@@ -10,7 +10,7 @@ import log from '../../utils/log.js';
 import { resolveAgentChatsStore } from '../../stores/agent-chats/index.js';
 import { AgentPair, Message } from '../../stores/agent-chats/types.js';
 import { updateDashboard } from './dashboard-client.js';
-import { getManageUrl } from './misc.js';
+import { getChatDetailUrl } from './misc.js';
 
 
 const agentChatsStore = resolveAgentChatsStore();
@@ -66,7 +66,7 @@ export async function continueChat( { uid, agentDid, peerDid, envelopeOptions = 
         messages: chatUpdate.messages,
         agentResolution,
         peerResolution,
-        manageUrl: getManageUrl( agentDid, peerDid )
+        manageUrl: getChatDetailUrl( agentDid, peerDid )
     }, authContext, force );
 
     //

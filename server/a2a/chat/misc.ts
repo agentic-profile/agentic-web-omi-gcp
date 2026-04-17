@@ -1,6 +1,8 @@
 import { DID, parseDid } from '@agentic-profile/common';
 import { resolveAccountStore } from "../../stores/accounts/index.ts";
 import log from "../../utils/log.js";
+import { appUrl } from '../../utils/http.js';
+import { Request } from 'express';
 
 const accountStore = resolveAccountStore();
 
@@ -38,9 +40,9 @@ export async function ensureAgentOwnerInGoodStanding( agentDid: DID ) {
     return { uid, name, credits, account };
 }
 
-export function getManageUrl( agentDid: DID, peerDid: DID ): string | undefined {
+export function getChatDetailUrl( agentDid: DID, peerDid: DID ): string | undefined {
     try {
-        const u = new URL( '/agents/chats/detail', process.env.SERVICE_URL || 'https://omi.matchwise.ai' );
+        const u = new URL( '/agent-chats/detail', process.env.SERVICE_URL || 'https://omi.matchwise.ai' );
         u.searchParams.set( 'agentDid', agentDid );
         u.searchParams.set( 'peerDid', peerDid );
         return u.href;
@@ -48,4 +50,8 @@ export function getManageUrl( agentDid: DID, peerDid: DID ): string | undefined 
         log.error('Failed to generate manage URL', error);
         return undefined;
     } 
+}
+
+export function manageChatUrl( req: Request ) {
+    return `${appUrl(req).url}/manage/chat`;
 }

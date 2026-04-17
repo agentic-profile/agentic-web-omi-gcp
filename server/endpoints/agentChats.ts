@@ -5,6 +5,8 @@ import { continueChat } from "../a2a/chat/continue-chat.ts";
 import { ensureAgentOwnerInGoodStanding } from "../a2a/chat/misc.ts";
 
 export function registerAgentChatsEndpoints(app: Express) {
+
+  /*
   app.get("/api/agent-chats", authenticate, async (req: any, res) => {
     const uid = req.user.uid as string;
     const store = resolveAgentChatsStore();
@@ -37,6 +39,7 @@ export function registerAgentChatsEndpoints(app: Express) {
     }
   });
 
+  /*
   app.delete("/api/agent-chats", authenticate, async (req: any, res) => {
     const uid = req.user.uid as string;
     const agentDid = String(req.query.agentDid ?? "");
@@ -56,6 +59,7 @@ export function registerAgentChatsEndpoints(app: Express) {
       res.status(500).json({ error: "Failed to delete agent chat" });
     }
   });
+  */
 
   app.post("/api/agent-chats/continue", authenticate, async (req: any, res) => {
     const uid = req.user.uid as string;

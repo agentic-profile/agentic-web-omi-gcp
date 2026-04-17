@@ -15,7 +15,7 @@ import { createProfileResolver } from '../utils/auth.js';
 import { createInMemoryAuthTokenCache } from '@agentic-profile/a2a-mcp-express';
 import { updateDashboard } from './chat/dashboard-client.js';
 import { generateReply } from './chat/reply.js';
-import { getManageUrl } from './chat/misc.js';
+import { getChatDetailUrl } from './chat/misc.js';
 
 /**
  * Handle an A2A SendMessage request.  This will process the message and return either
@@ -58,7 +58,7 @@ export async function handleA2aSendMessage(jrpcRequest: JsonRpcRequest, {session
         messages: chatUpdate.messages,
         agentResolution: chatUpdate.agentResolution,
         peerResolution: chatUpdate.peerResolution,
-        manageUrl: getManageUrl( agentDid, peerDid )
+        manageUrl: getChatDetailUrl( agentDid, peerDid )
     }, authContext );
 
     return jrpcResult(jrpcRequest.id!,{

@@ -14,7 +14,7 @@ import { resolveAgentChatsStore } from "../stores/agent-chats/index.js";
 import { AgentPair } from '../stores/agent-chats/types.js';
 import { ensureAgentOwnerInGoodStanding } from './chat/misc.js';
 import { continueChat } from './chat/continue-chat.ts';
-import { manageChatUrl } from "../utils/http.js";
+import { manageChatUrl } from './chat/misc.js';
 
 const agentChatsStore = resolveAgentChatsStore();
 
