@@ -10,8 +10,12 @@ import {
     resolveEnvelope,
     JsonRpcResponse
 } from '@agentic-profile/a2a-mcp-express';
-
+import { AuthContext } from '../lite-clients/client.js';
+import { createProfileResolver } from '../utils/auth.js';
+import { createInMemoryAuthTokenCache } from '@agentic-profile/a2a-mcp-express';
+import { updateDashboard } from './chat/dashboard-client.js';
 import { generateReply } from './chat/reply.js';
+import { getManageUrl } from './chat/misc.js';
 
 /**
  * Handle an A2A SendMessage request.  This will process the message and return either
@@ -30,7 +34,7 @@ export async function handleA2aSendMessage(jrpcRequest: JsonRpcRequest, {session
     const envelope = resolveEnvelope(jrpcRequest);
 
     // TODO: if we are swamped, then defer the reply to a later time and return a task...
-    const { agentReplyText, metadata } = await generateReply({
+    const { agentReplyText, metadata, chatUpdate, ...replyResult } = await generateReply({
         envelope,
         peerDid,
         inboundMessage
@@ -39,6 +43,23 @@ export async function handleA2aSendMessage(jrpcRequest: JsonRpcRequest, {session
         'handleA2aSendMessage() generated reply',
         prettyJson({ envelope, agentReplyText: truncate(agentReplyText), metadata })
     );
+
+    // update the dashboard with the new messages
+    const { to: agentDid } = envelope;
+    const authContext: AuthContext = {
+        agentDid,
+        profileResolver: (await createProfileResolver(agentDid)).profileResolver,
+        authTokenCache: createInMemoryAuthTokenCache()
+    };
+
+    await updateDashboard( replyResult.prev, {
+        agentDid,
+        peerDid,
+        messages: chatUpdate.messages,
+        agentResolution: chatUpdate.agentResolution,
+        peerResolution: chatUpdate.peerResolution,
+        manageUrl: getManageUrl( agentDid, peerDid )
+    }, authContext );
 
     return jrpcResult(jrpcRequest.id!,{
         message: {

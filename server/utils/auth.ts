@@ -80,7 +80,7 @@ export async function createProfileResolver( did: DID ): Promise<CreateProfileRe
     const profiles = [ 
         myProfileAndKeyring,
         systemProfileAndKeyring
-    ]; 
+    ];
 
     const profileResolver = async ( did: DID ): Promise<ProfileAndKeyring> => {
         const targetId = parseDid( did ).did;

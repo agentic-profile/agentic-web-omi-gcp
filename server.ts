@@ -17,6 +17,7 @@ import { registerOmiApiKeyEndpoints } from "./server/endpoints/omiApiKey.ts";
 import { registerOmiMemoryEndpoints } from "./server/endpoints/omiMemory.ts";
 import { registerPublishEndpoints } from "./server/endpoints/publish.ts";
 import { registerAccountEndpoints } from "./server/endpoints/account.ts";
+import { registerAgentChatsEndpoints } from "./server/endpoints/agentChats.ts";
 
 const didResolver = createDidResolver();
 
@@ -49,6 +50,7 @@ async function startServer() {
   registerOmiApiKeyEndpoints(app);
   registerOmiMemoryEndpoints(app, genAI);
   registerPublishEndpoints(app);
+  registerAgentChatsEndpoints(app);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
@@ -65,8 +67,9 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  const portNumber = typeof PORT === "string" ? Number(PORT) : PORT;
+  app.listen(portNumber, "0.0.0.0", () => {
+    console.log(`Server running on http://localhost:${portNumber}`);
   });
 }
 

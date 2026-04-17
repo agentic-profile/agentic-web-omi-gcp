@@ -20,7 +20,7 @@ export class FirestoreAccountStore implements AccountStore {
 
     async readAccountByAgentDid(did: DID): Promise<Account | null> {
         try {
-            const snapshot = await this.db.collection(COLLECTION).where("did", "==", did).limit(1).get();
+            const snapshot = await this.db.collection(COLLECTION).where("agentDid", "==", did).limit(1).get();
             if (snapshot.empty) return null;
             const doc = snapshot.docs[0];
             return { uid: doc.id as any, ...doc.data() } as Account;

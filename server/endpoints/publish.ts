@@ -23,7 +23,8 @@ export function registerPublishEndpoints(app: Express) {
         handleFirestoreError(error, OperationType.CREATE, "otps");
       }
 
-      const baseUrl = appUrl(req);
+      let { url: baseUrl, host } = appUrl(req);
+      host = host.replace(":", "%3A");
       console.log(`[API] Generated payload for ${userId} with callback: ${baseUrl}/publish/callback`);
 
       const payload = {
@@ -48,7 +49,7 @@ export function registerPublishEndpoints(app: Express) {
           type: "a2a/lite",
           serviceEndpoint: `${baseUrl}/a2a`,
           capabilityInvocation: [
-            "did:web:agents-api.matchwise.ai#system-key"
+            `did:web:${host}#system-key`
           ]
         }
       };

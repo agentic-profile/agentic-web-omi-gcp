@@ -37,7 +37,7 @@ export function registerOmiApiKeyEndpoints(app: Express) {
         apiKey = keysSnapshot.docs[0].data().key;
       }
 
-      const webhookUrl = `${appUrl(req)}/omi/memory/${apiKey}`;
+      const webhookUrl = `${appUrl(req).url}/omi/memory/${apiKey}`;
       res.json({ apiKey, webhookUrl });
     } catch (error: any) {
       console.error("Firestore Error in /omi/api-key:", error);

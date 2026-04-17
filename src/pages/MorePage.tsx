@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { User as UserIcon, Terminal, FileEdit, ChevronRight, History, MessageSquare, Settings } from "lucide-react";
+import { User as UserIcon, Terminal, FileEdit, ChevronRight, History, MessageSquare, Settings, Bot } from "lucide-react";
 
 export default function MorePage() {
   const navigate = useNavigate();
@@ -8,7 +8,8 @@ export default function MorePage() {
   const options = [
     { label: "My Account", icon: <UserIcon size={20} />, path: "/account" },
     { label: "Omi Memories", icon: <History size={20} />, path: "/history" },
-    { label: "Reflection Chat", icon: <MessageSquare size={20} />, path: "/chat" },
+    { label: "Reflection Chat", icon: <MessageSquare size={20} />, path: "/reflection-chat" },
+    { label: "Agent Chats", icon: <Bot size={20} />, path: "/agent-chats" },
     { label: "Edit Prompts & Introduction", icon: <FileEdit size={20} />, path: "/edit-prompts" },
     { label: "Settings", icon: <Settings size={20} />, path: "/settings" },
     { label: "Test", icon: <Terminal size={20} />, path: "/test" },

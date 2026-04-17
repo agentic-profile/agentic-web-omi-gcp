@@ -37,3 +37,15 @@ export async function ensureAgentOwnerInGoodStanding( agentDid: DID ) {
 
     return { uid, name, credits, account };
 }
+
+export function getManageUrl( agentDid: DID, peerDid: DID ): string | undefined {
+    try {
+        const u = new URL( '/agents/chats/detail', process.env.SERVICE_URL || 'https://omi.matchwise.ai' );
+        u.searchParams.set( 'agentDid', agentDid );
+        u.searchParams.set( 'peerDid', peerDid );
+        return u.href;
+    } catch( error ) {
+        log.error('Failed to generate manage URL', error);
+        return undefined;
+    } 
+}

@@ -1,24 +1,24 @@
 import { DID, prettyJson } from '@agentic-profile/common';
-import { GoogleGenAI } from "@google/genai";
+import { CreateChatParameters, GoogleGenAI } from "@google/genai";
 import log from '../../utils/log.js';
-
+import { truncate } from '../../utils/misc.js';
 import {
     AgentChat, AgentPair, Part, Message, UpdateAgentChatParams,
     MessageMetadata, ChatResolution
 } from '../../stores/agent-chats/types.js';
-//import { chatCompletion, ClaudeMessage } from '@/common/inference/claude-bedrock.js';
 import { extractJson } from '../../utils/json.js';
 import type { AgentMessageEnvelope } from '@agentic-profile/a2a-mcp-express';
 import { createSystemPrompt } from '../../a2a/chat/prompt-templates.js';
 import { resolveAgentChatsStore } from "../../stores/agent-chats/index.js";
-import { resolveAgentsStore } from "../../stores/agents/index.js";
 import { resolveAccountStore } from "../../stores/accounts/index.js";
 import { resolveSender, ensureAgentOwnerInGoodStanding } from './misc.js';
+import { computeTokenCost, UsageMetadata } from './cost.js';
 
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 const agentChatsStore = resolveAgentChatsStore();
 const accountStore = resolveAccountStore();
+
 
 export interface ReplyParams {
     envelope: AgentMessageEnvelope;
@@ -47,12 +47,11 @@ export async function generateReply({ envelope, peerDid, inboundMessage }: Reply
         chatUpdate.rewind = rewind;
     peerDid = resolveSender( envelope.from, peerDid );
 
-    //const contextId = `${toAgentDid}^${fromAgentDid}`;  // e.g. did:web:iamagentic.ai:1#venture^did:web:iamagentic.ai:1#venture
     const chatId: AgentPair = { agentDid, peerDid };  // peer is remote
 
     // currently only supports/records the first text part found
     const textPart: Part | undefined = inboundMessage?.parts?.find((part: Part) => "text" in part);
-    const peerText = textPart?.text;
+    const peerText = textPart?.text?.trim();
     const peerMetadata = inboundMessage?.metadata;
 
     const { uid, account } = await ensureAgentOwnerInGoodStanding( agentDid );
@@ -74,10 +73,6 @@ export async function generateReply({ envelope, peerDid, inboundMessage }: Reply
     }
     let messageCount = a2aMessageHistory.length;
 
-    //
-    // Claude...
-    //
-
     let agentReplyText;
     if( !a2aMessageHistory.find(m => m.role === "ROLE_AGENT") ) {
         // No message from me/agent, so introduce myself...
@@ -87,27 +82,14 @@ export async function generateReply({ envelope, peerDid, inboundMessage }: Reply
         );
         agentReplyText = `Hello!  A quick summary of what I'm doing...\n\n${account.introduction}`;
     } else {
-        /* convert A2A messages to Claude messages
-        const claudeMessages: ClaudeMessage[] = a2aMessageHistory.map(m => ({
-            role: m.role === "ROLE_USER" ? "user" : "assistant",
-            content: m.parts.map(p => "text" in p ? p.text : "").join("\n\n")
-        }));
-        if( peerText )
-            claudeMessages.push({ role: "user", content: peerText } as ClaudeMessage);
-
-        // continue the conversation
-        const options = {
-            system: createSystemPrompt({ name: name ?? DEFAULT_NAME }, agent),
-            messages: claudeMessages
-        };
-        const { text, cost } = await chatCompletion(options);
-        */
-
-        //=== Gemini ===
         //if( peerText )
         //    a2aMessageHistory.push({ role: "ROLE_USER", parts:[{ text:peerText }]});
+
+        // Fallback for when I've already introduced myself and this is a cold start
+        const message = peerText ?? "Ask me a question about anything I have shared about myself.";
+
         const systemInstruction = createSystemPrompt( account );
-        const { text, cost } = await chatCompletion( systemInstruction, a2aMessageHistory, peerText );  
+        const { text, cost } = await chatCompletion( systemInstruction, a2aMessageHistory, message );
 
         await accountStore.subtractCredit(account.uid, cost);
         agentReplyText = text;
@@ -161,37 +143,35 @@ function updateResolutions( chatUpdate: UpdateAgentChatParams, messages: Message
 }
 
 async function chatCompletion( systemInstruction: string, a2aHistory: Message[], message: string ) {
+    const trimmed = message?.trim();
+    if( !trimmed )
+        throw new Error("chatCompletion requires a non-empty message");
+
     const history = a2aHistory.map(({role,parts})=>{
         role = role === 'ROLE_USER' ? 'user' : 'model';
-        const content = parts.map(p => "text" in p ? p.text : "").join("\n\n");
-        return { role, content };
-    }); 
-    const chat = genAI.chats.create({
-        model: "gemini-3-flash-preview",
+        return { role, parts };
+    });
+    const model = "gemini-3.1-flash-lite-preview";
+    const params = {
+        model,
         history,
         config: {
             systemInstruction
         }
-    });
+    } as CreateChatParameters; 
+    const chat = genAI.chats.create(params);
 
-    const response = await chat.sendMessage({ message });
-    return { text: response.text, cost: 0 };
+    //log.info(`genAI.chats.create(${prettyJson(params)}) then sendMessage({message:"${trimmed}"})`);
 
-    /*
-    const response = await genAI.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `Analyze this raw JSON data from an Omi wearable device and create a structured summary JSON object. 
-        Focus on key events, people mentioned, and emotional tone.
-        
-        Raw Data: ${JSON.stringify(raw)}
-        
-        Return a JSON object with fields like: "main_topic", "key_points" (array), "sentiment", "entities" (array).`,
-        config: {
-            responseMimeType: "application/json"
-        }
-    });
-    
-    summary = JSON.parse(response.text || "{}");
-    return summary;
-    */
+    const response = await chat.sendMessage({ message: trimmed });
+
+    const usage: UsageMetadata | undefined =
+        (response as any)?.usageMetadata ??
+        (response as any)?.response?.usageMetadata ??
+        (response as any)?.response?.usage_metadata;
+    const cost = computeTokenCost(model, usage);
+
+    const { text } = response;
+    log.info(`chat.sendMessage() cost: ${cost} message: ${truncate(trimmed,50)} reply: ${truncate(text,50)}`);
+    return { text, cost };
 }

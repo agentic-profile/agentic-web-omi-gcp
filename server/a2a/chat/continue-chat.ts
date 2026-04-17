@@ -10,6 +10,7 @@ import log from '../../utils/log.js';
 import { resolveAgentChatsStore } from '../../stores/agent-chats/index.js';
 import { AgentPair, Message } from '../../stores/agent-chats/types.js';
 import { updateDashboard } from './dashboard-client.js';
+import { getManageUrl } from './misc.js';
 
 
 const agentChatsStore = resolveAgentChatsStore();
@@ -32,7 +33,7 @@ export interface ContinueChatResult {
 
 export async function continueChat( { uid, agentDid, peerDid, envelopeOptions = {} }: ContinueChatParams ): Promise<ContinueChatResult> {
     //
-    // generate our agent's reply
+    // generate our agent's reply (when there is no inbound message)
     //
     const { agentReplyText, metadata, chatUpdate, messageCount, ...replyResult } = await generateReply({
         envelope: {
@@ -130,14 +131,4 @@ export async function continueChat( { uid, agentDid, peerDid, envelopeOptions = 
     };
 }
 
-function getManageUrl( agentDid: DID, peerDid: DID ): string | undefined {
-    try {
-        const u = new URL( '/agents/chats/detail', process.env.WEBAPP_URL || 'https://agents.matchwise.ai' );
-        u.searchParams.set( 'agentDid', agentDid );
-        u.searchParams.set( 'peerDid', peerDid );
-        return u.href;
-    } catch( error ) {
-        log.error('Failed to generate manage URL', error);
-        return undefined;
-    } 
-}
+

@@ -11,7 +11,7 @@ import { auth } from "./firebase";
 import { Button } from "@/src/components/ui/button";
 import { Toaster } from "@/src/components/ui/sonner";
 import LandingPage from "./pages/LandingPage";
-import ChatPage from "./pages/ChatPage";
+import ReflectionChatPage from "./pages/chat/ReflectionChatPage";
 import OmiSetupPage from "./pages/OmiSetupPage";
 import OmiMemoriesPage from "./pages/OmiMemoriesPage";
 import MorePage from "./pages/MorePage";
@@ -22,6 +22,8 @@ import PublishPage from "./pages/publish/PublishPage";
 import SettingsPage from "./pages/SettingsPage";
 import ManagePage from "./pages/ManagePage";
 import { Settings, History, Home, LogIn, LogOut, Menu, X, ArrowLeftRight, Share2 } from "lucide-react";
+import AgentChatsPage from "./pages/chat/AgentChatsPage";
+import AgentChatsDetailRoutePage from "./pages/chat/AgentChatsDetailRoutePage";
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -133,11 +135,13 @@ export default function App() {
         <main className="flex-1 overflow-auto relative">
           <Routes>
             <Route path="/" element={<LandingPage user={user} login={login} />} />
-            <Route path="/chat" element={user ? <ChatPage user={user} /> : <LandingPage user={user} login={login} />} />
+            <Route path="/reflection-chat" element={user ? <ReflectionChatPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/history" element={user ? <OmiMemoriesPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/setup" element={user ? <OmiSetupPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/publish" element={user ? <PublishPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/more" element={user ? <MorePage /> : <LandingPage user={user} login={login} />} />
+            <Route path="/agent-chats" element={<AgentChatsPage user={user} login={login} />} />
+            <Route path="/agent-chats/detail" element={<AgentChatsDetailRoutePage user={user} login={login} />} />
             <Route path="/manage" element={<ManagePage user={user} login={login} />} />
             <Route path="/account" element={user ? <MyAccountPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/edit-prompts" element={user ? <EditPromptsPage user={user} /> : <LandingPage user={user} login={login} />} />

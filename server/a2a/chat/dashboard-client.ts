@@ -53,7 +53,9 @@ export async function updateDashboard( prevResolutions: ChatResolutionPair, chat
         return prevResolutions;
     }
 
-    log.info( 'updateDashboard()', prettyJson(chat) );
+    const notification = buildDashboardNotification( prevResolutions, chat, peerDid );
+    log.info( 'updateDashboard(2)', prettyJson({chat,notification}));
+
     let serviceUrl;
     let mcpRequest;
     try {
@@ -62,7 +64,7 @@ export async function updateDashboard( prevResolutions: ChatResolutionPair, chat
 
         const payload: UpdateDashboardPayload = {
             chat,
-            notification: buildDashboardNotification( prevResolutions, chat, peerDid ),
+            notification
         };
         mcpRequest = createMcpToolsCallRequest( 'update', payload );
         const { fetchResponse } = await mcpFetch( serviceUrl, mcpRequest, authContext );

@@ -11,7 +11,7 @@ interface Message {
   content: string;
 }
 
-export default function ChatPage({ user }: { user: User }) {
+export default function ReflectionChatPage({ user }: { user: User }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);

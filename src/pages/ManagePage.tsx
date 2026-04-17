@@ -11,7 +11,7 @@ export default function ManagePage({ user, login }: { user: User | null; login: 
   const options = [
     { label: "My Account", icon: <UserIcon size={20} />, path: "/account" },
     { label: "Omi Memories", icon: <History size={20} />, path: "/history" },
-    { label: "Reflection Chat", icon: <MessageSquare size={20} />, path: "/chat" },
+    { label: "Reflection Chat", icon: <MessageSquare size={20} />, path: "/reflection-chat" },
     { label: "Edit Prompts & Introduction", icon: <FileEdit size={20} />, path: "/edit-prompts" },
     { label: "Settings", icon: <Settings size={20} />, path: "/settings" },
     { label: "Test", icon: <Terminal size={20} />, path: "/test" },
