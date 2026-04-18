@@ -19,17 +19,37 @@ const systemProfile = resolveWellKnownDidDocument("");
 
 const didResolver = createDidResolver();
 try {
-    const url = process.env.SERVICE_URL;
-    if( !url )
-        log.error(`Missing SERVICE_URL`);
-    else {
-        const u = new URL(url);
-        // did:web encodes ":" in host:port as %3A; URL.hostname drops the port.
-        const didWebHost = u.port ? `${u.hostname}%3A${u.port}` : u.hostname;
-        systemProfile.id = `did:web:${didWebHost}`;
-    }
+    const url = process.env.SERVICE_URL || "https://omi.matchwise.ai";
+    log.info(`SERVICE_URL: ${url}`);
+
+    const u = new URL(url);
+    // did:web encodes ":" in host:port as %3A; URL.hostname drops the port.
+    const didWebHost = u.port ? `${u.hostname}%3A${u.port}` : u.hostname;
+    systemProfile.id = `did:web:${didWebHost}`;
+    log.info(`systemProfile.id: ${systemProfile.id}`);
+
 } catch( err ) {
     log.error(`Failed to parse SERVICE_URL ${process.env.SERVICE_URL} - ${err}`);
+}
+
+const PRIVATE_JWK_D_LOG_PREFIX_LEN = 8;
+
+/** For logs only — copies keyring entries with `privateJwk.d` truncated. */
+function sanitizeKeyringForLog(keyring: JWKSet[]): unknown[] {
+    return keyring.map((entry) => {
+        const pj = entry.privateJwk as { d?: string } | undefined;
+        const d = pj?.d;
+        if (!pj || typeof d !== "string") {
+            return entry;
+        }
+        return {
+            ...entry,
+            privateJwk: {
+                ...pj,
+                d: `${d.slice(0, PRIVATE_JWK_D_LOG_PREFIX_LEN)}…`,
+            },
+        };
+    });
 }
 
 const keyring: JWKSet[] = [];
@@ -86,7 +106,14 @@ export async function createProfileResolver( did: DID ): Promise<CreateProfileRe
         const targetId = parseDid( did ).did;
         const found = profiles.find( e=>e.profile.id === targetId );
         if( !found ) {
-            log.debug(`Failed to resolve agentic profile ${did} ${targetId} - ${JSON.stringify(profiles,null,4)}`);
+            log.info("Failed to resolve agentic profile", prettyJson({
+                did,
+                targetId,
+                profiles: profiles.map((p) => ({
+                    profileId: p.profile.id,
+                    keyring: sanitizeKeyringForLog(p.keyring),
+                })),
+            }));
             throw new Error(`Failed to resolve agentic profile ${did}`);
         }
 

@@ -39,7 +39,7 @@ export function createSystemPrompt( { chat_instruction, introduction, name = "A 
     const context = { name, summary: introduction };
     const prompt = replacePlaceholders({ template, context });
 
-    log.info(`createSystemPrompt() prompt: ${prettyJson({chat_instruction, introduction, name, prompt, template, context})}`);
+    //log.info(`createSystemPrompt() prompt: ${prettyJson({chat_instruction, introduction, name, prompt, template, context})}`);
     return prompt;
 }
 

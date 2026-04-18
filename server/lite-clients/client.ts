@@ -34,7 +34,7 @@ export async function liteFetch<T extends RpcBody>( url: string, request: T, aut
     requestInit.headers = new Headers( requestInit.headers ?? {} );
     requestInit.headers.set('Accept', 'application/json');  // text/event-stream is NOT supported by this client
 
-    log.info( 'liteFetch()', prettyJson({url, request, requestInit}) );
+    //log.info( 'liteFetch()', prettyJson({url, request, requestInit}) );
     const fetchResult = await fetchJsonRpc(
         url,
         request,

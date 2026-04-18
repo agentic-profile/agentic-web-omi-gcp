@@ -120,10 +120,18 @@ export async function generateReply({ envelope, peerDid, inboundMessage, altProm
         // they did NOT send a text message... maybe they update a metadata.resolution? (handled below...)
     }
 
-    if( peerText || peerMetadata?.resolution )
-        chatUpdate.messages.push({ role: "ROLE_USER", parts: textToParts(peerText), metadata: peerMetadata } as Message);
-    if( replyText || replyMetadata?.resolution )
-        chatUpdate.messages.push({ role: "ROLE_AGENT", parts: textToParts(replyText), metadata: replyMetadata } as Message);
+    if( peerText || peerMetadata?.resolution ) {
+        const userMsg = { role: "ROLE_USER", parts: textToParts(peerText) } as Message;
+        if( peerMetadata !== undefined )
+            userMsg.metadata = peerMetadata;
+        chatUpdate.messages.push(userMsg);
+    }
+    if( replyText || replyMetadata?.resolution ) {
+        const agentMsg = { role: "ROLE_AGENT", parts: textToParts(replyText) } as Message;
+        if( replyMetadata !== undefined )
+            agentMsg.metadata = replyMetadata;
+        chatUpdate.messages.push(agentMsg);
+    }
 
     // Revise the chatUpdate with any new resolutions from the message
     updateResolutions( chatUpdate );
@@ -139,7 +147,7 @@ export async function generateReply({ envelope, peerDid, inboundMessage, altProm
 }
 
 function updateResolutions( chatUpdate: UpdateAgentChatParams ) {
-    log.info(`updateResolutions() ${prettyJson({chatUpdate})}`);
+    //log.info(`updateResolutions() ${prettyJson({chatUpdate})}`);
     for( const { role, metadata } of chatUpdate.messages ?? [] ) {
         if( metadata?.resolution ) {
             log.info(`found new resolution for ${role}: ${prettyJson(metadata.resolution)}`);
@@ -184,7 +192,7 @@ async function chatCompletion( systemInstruction: string, a2aHistory: Message[],
         (response as any)?.usageMetadata ??
         (response as any)?.response?.usageMetadata ??
         (response as any)?.response?.usage_metadata;
-    const cost = computeTokenCost(model, usage);
+    const cost = computeTokenCost(model, usage) * 10;
 
     const { text } = response;
     log.info(`chat.sendMessage() cost: ${cost} message: ${truncate(trimmed,50)} reply: ${truncate(text,50)}`);

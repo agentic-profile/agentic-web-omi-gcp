@@ -47,6 +47,7 @@ export { admin };
 const databaseId = firebaseConfig.firestoreDatabaseId || "(default)";
 console.log(`[Firebase Admin] Using Firestore database: ${databaseId}`);
 export const adminDb = getFirestore(databaseId);
+adminDb.settings({ ignoreUndefinedProperties: true });
 
 export const OperationType = {
   CREATE: 'create',

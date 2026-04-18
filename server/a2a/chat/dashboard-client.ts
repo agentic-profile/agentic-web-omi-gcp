@@ -35,7 +35,7 @@ export interface UpdateDashboardPayload {
 }
 
 export async function updateDashboard( prevResolutions: ChatResolutionPair, chat: DashboardChatUpdate, authContext: AuthContext, force: boolean = true ): Promise<ChatResolutionPair> {    
-    log.info( 'updateDashboard()', prettyJson({prevResolutions, chat, force}) );
+    //log.info( 'updateDashboard()', prettyJson({prevResolutions, chat, force}) );
     
     // sanity
     if( chat.agentDid !== authContext.agentDid )
@@ -56,7 +56,7 @@ export async function updateDashboard( prevResolutions: ChatResolutionPair, chat
     }
 
     const notification = buildDashboardNotification( prevResolutions, chat, peerDid );
-    log.info( 'updateDashboard(2)', prettyJson({chat,notification}));
+    //log.info( 'updateDashboard(2)', prettyJson({chat,notification}));
 
     let serviceUrl;
     let mcpRequest;

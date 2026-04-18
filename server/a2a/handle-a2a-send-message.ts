@@ -31,7 +31,7 @@ const JRPC_ERROR_INVALID_PARAMS = -32602;
  * @returns 
  */
 export async function handleA2aSendMessage(jrpcRequest: JsonRpcRequest, {session}: JsonRpcRequestContext): Promise<JsonRpcResponse> {
-    log.info( 'handleA2aSendMessage()', prettyJson({jrpcRequest, session}) );
+    //log.info( 'handleA2aSendMessage()', prettyJson({jrpcRequest, session}) );
     if( !session )
         return jrpcErrorAuthRequired( jrpcRequest.id! );
 

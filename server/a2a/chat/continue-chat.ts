@@ -33,7 +33,7 @@ export interface ContinueChatResult {
 }
 
 export async function continueChat( params: ContinueChatParams ): Promise<ContinueChatResult> {
-    log.info( 'continueChat()', prettyJson(params) );
+    //log.info( 'continueChat()', prettyJson(params) );
     const { uid, agentDid, peerDid, envelopeOptions } = params;
 
     //
@@ -73,7 +73,7 @@ interface UpdateChatParams {
 }
 
 export async function updateChat( params: UpdateChatParams ) {
-    log.info( 'updateChat()', prettyJson(params) );
+    //log.info( 'updateChat()', prettyJson(params) );
     const {
         uid, agentDid, peerDid,
         chatUpdate, replyText, replyMetadata, messageCount, 
@@ -137,7 +137,7 @@ export async function updateChat( params: UpdateChatParams ) {
         userMessage = {
             role: "ROLE_USER",
             parts: message.parts,
-            metadata: message.metadata
+            ...(message.metadata !== undefined ? { metadata: message.metadata } : {}),
         };
         // save the peer reply to our history
         await agentChatsStore.update(
