@@ -4,7 +4,7 @@ export type AgentCardProps = {
 
 export function agentCard({url}: AgentCardProps): any {
     return {
-        name: 'Omi Agentic Web',
+        name: 'Omi + Agentic Web by Matchwise',
         description: 'Service that uses Omi to learn about a person and help them connect with outhers',
         provider: {
             organization: 'Matchwise',

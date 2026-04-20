@@ -32,23 +32,21 @@ try {
     log.error(`Failed to parse SERVICE_URL ${process.env.SERVICE_URL} - ${err}`);
 }
 
-const PRIVATE_JWK_D_LOG_PREFIX_LEN = 8;
+const SECRET_LOG_PREFIX_LEN = 8;
 
-/** For logs only — copies keyring entries with `privateJwk.d` truncated. */
+/** For logs only — copies keyring entries with `privateJwk.d` and `b64uPrivateKey` truncated. */
 function sanitizeKeyringForLog(keyring: JWKSet[]): unknown[] {
     return keyring.map((entry) => {
+        const out = { ...entry } as Record<string, unknown>;
         const pj = entry.privateJwk as { d?: string } | undefined;
-        const d = pj?.d;
-        if (!pj || typeof d !== "string") {
-            return entry;
+        if (pj && typeof pj.d === "string") {
+            out.privateJwk = { ...pj, d: `${pj.d.slice(0, SECRET_LOG_PREFIX_LEN)}…` };
         }
-        return {
-            ...entry,
-            privateJwk: {
-                ...pj,
-                d: `${d.slice(0, PRIVATE_JWK_D_LOG_PREFIX_LEN)}…`,
-            },
-        };
+        const b64 = (entry as { b64uPrivateKey?: unknown }).b64uPrivateKey;
+        if (typeof b64 === "string") {
+            out.b64uPrivateKey = `${b64.slice(0, SECRET_LOG_PREFIX_LEN)}…`;
+        }
+        return out;
     });
 }
 

@@ -24,6 +24,7 @@ import ManagePage from "./pages/ManagePage";
 import { Settings, History, Home, LogIn, LogOut, Menu, X, ArrowLeftRight, Share2 } from "lucide-react";
 import AgentChatsPage from "./pages/chat/AgentChatsPage";
 import AgentChatsDetailPage from "./pages/chat/AgentChatsDetailPage";
+import ManageUsersPage from "./pages/ManageUsersPage.tsx";
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,7 +75,7 @@ export default function App() {
         <header className="md:hidden flex items-center justify-between p-4 border-b border-zinc-800 bg-zinc-900 z-50">
           <div className="flex items-center gap-2">
             <img src="/favicon.svg" alt="Logo" className="w-6 h-6" />
-            <span className="font-bold text-lg tracking-tight">Omi Agentic Web</span>
+            <span className="font-bold text-lg tracking-tight whitespace-nowrap">Omi + Agentic Web</span>
           </div>
           <button 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -89,9 +90,9 @@ export default function App() {
           fixed inset-0 z-40 bg-zinc-900 md:relative md:flex md:w-64 md:bg-zinc-900/50 border-r border-zinc-800 p-4 flex-col gap-8 transition-transform duration-300 ease-in-out
           ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
         `}>
-          <div className="hidden md:flex items-center gap-2 px-1">
-            <img src="/favicon.svg" alt="Logo" className="w-8 h-8" />
-            <span className="font-bold text-xl tracking-tight">Omi Agentic Web</span>
+          <div className="hidden md:flex items-center gap-2 px-1 min-w-0">
+            <img src="/favicon.svg" alt="Logo" className="w-8 h-8 shrink-0" />
+            <span className="font-bold text-xl tracking-tight whitespace-nowrap">Omi + Agentic Web</span>
           </div>
 
           <div className="flex flex-col gap-2 flex-1 mt-12 md:mt-0">
@@ -139,7 +140,7 @@ export default function App() {
             <Route path="/history" element={user ? <OmiMemoriesPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/setup" element={user ? <OmiSetupPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/publish" element={user ? <PublishPage user={user} /> : <LandingPage user={user} login={login} />} />
-            <Route path="/more" element={user ? <MorePage /> : <LandingPage user={user} login={login} />} />
+            <Route path="/more" element={user ? <MorePage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/agent-chats" element={<AgentChatsPage user={user} login={login} />} />
             <Route path="/agent-chats/detail" element={<AgentChatsDetailPage user={user} login={login} />} />
             <Route path="/manage" element={<ManagePage user={user} login={login} />} />
@@ -147,6 +148,7 @@ export default function App() {
             <Route path="/edit-prompts" element={user ? <EditPromptsPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/settings" element={user ? <SettingsPage /> : <LandingPage user={user} login={login} />} />
             <Route path="/test" element={user ? <TestWebhookPage user={user} /> : <LandingPage user={user} login={login} />} />
+            <Route path="/manage-users" element={user ? <ManageUsersPage user={user} /> : <LandingPage user={user} login={login} />} />
           </Routes>
         </main>
         <Toaster position="top-right" theme="dark" />

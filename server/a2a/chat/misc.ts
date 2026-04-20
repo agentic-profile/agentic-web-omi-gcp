@@ -4,6 +4,7 @@ import log from "../../utils/log.js";
 import { appUrl } from '../../utils/http.js';
 import { Request } from 'express';
 import { Part } from '@/server/stores/agent-chats/types.ts';
+import { Account } from '../../stores/accounts/types.ts';
 
 const accountStore = resolveAccountStore();
 
@@ -30,9 +31,13 @@ export async function ensureAgentOwnerInGoodStanding( agentDid: DID ) {
     const account = await accountStore.readAccountByAgentDid( agentDid );
     if( !account )
         throw new Error(`Account not found for ${agentDid}`);
-    const { uid, name, credits } = account;
-    //if( disabled_by )
-    //    throw new Error(`Agent owner ${agent.uid} account is disabled`);
+    return ensureAccountInGoodStanding( account );
+}
+
+export function ensureAccountInGoodStanding( account: Account ) {
+    const { uid, name, credits, disabled, agentDid } = account;
+    if( disabled )
+        throw new Error(`Agent owner ${uid} account is disabled`);
     if( credits <= 0 ) {
         log.warn(`Agent owners account has insufficient credit`);
         throw new Error(`Agent ${agentDid} owner ${uid} has insufficient credit`);

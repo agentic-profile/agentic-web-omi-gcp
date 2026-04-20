@@ -16,7 +16,7 @@ import { createProfileResolver } from '../utils/auth.js';
 import { createInMemoryAuthTokenCache } from '@agentic-profile/a2a-mcp-express';
 import { updateDashboard } from './chat/dashboard-client.js';
 import { generateReply } from './chat/reply.js';
-import { getChatDetailUrl, partsToText, textToParts } from './chat/misc.js';
+import { ensureAgentOwnerInGoodStanding, getChatDetailUrl, partsToText, textToParts } from './chat/misc.js';
 import { Message } from '../stores/agent-chats/types.js';
 import { generateTaskComplete } from './misc.js';
 
@@ -38,6 +38,7 @@ export async function handleA2aSendMessage(jrpcRequest: JsonRpcRequest, {session
     const peerDid = session.agentDid;  // might or might not include fragment...
     const { message: inboundMessage } = jrpcRequest.params;
     const envelope = resolveEnvelope(jrpcRequest);
+    const { to: agentDid } = envelope;
 
     // sanity
     if( isEmptyMessage(inboundMessage) )
@@ -53,7 +54,6 @@ export async function handleA2aSendMessage(jrpcRequest: JsonRpcRequest, {session
     const { replyText, replyMetadata, chatUpdate, prevResolutions } = replyResult;
 
     // update the dashboard with the new messages
-    const { to: agentDid } = envelope;
     const authContext: AuthContext = {
         agentDid,
         profileResolver: (await createProfileResolver(agentDid)).profileResolver,

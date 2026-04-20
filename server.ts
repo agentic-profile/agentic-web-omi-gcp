@@ -18,6 +18,7 @@ import { registerOmiMemoryEndpoints } from "./server/endpoints/omiMemory.ts";
 import { registerPublishEndpoints } from "./server/endpoints/publish.ts";
 import { registerAccountEndpoints } from "./server/endpoints/account.ts";
 import { registerAgentChatsEndpoints } from "./server/endpoints/agentChats.ts";
+import { registerAdminEndpoints } from "./server/endpoints/admin.ts";
 
 const didResolver = createDidResolver();
 
@@ -51,6 +52,7 @@ async function startServer() {
   registerOmiMemoryEndpoints(app, genAI);
   registerPublishEndpoints(app);
   registerAgentChatsEndpoints(app);
+  registerAdminEndpoints(app);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

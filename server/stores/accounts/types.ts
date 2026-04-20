@@ -18,6 +18,9 @@ export interface Account {
     pictureUrl?: string;
     credits: number;
     role?: string;
+    /** When true, the account is administratively disabled. */
+    disabled?: boolean;
+    email?: string;
     chat_instruction?: string;
     introduction?: string;
     memory_summarize?: string;
@@ -37,6 +40,8 @@ export interface CreateAccountFields {
     pictureUrl?: string;
     credits: number;
     role?: string;
+    disabled?: boolean;
+    email?: string;
     chat_instruction?: string;
     introduction?: string;
     memory_summarize?: string;
@@ -48,6 +53,7 @@ export interface UpdateAccountFields {
     pictureUrl?: string;
     credits?: number;
     role?: string;
+    disabled?: boolean;
     chat_instruction?: string;
     introduction?: string;
     memory_summarize?: string;
