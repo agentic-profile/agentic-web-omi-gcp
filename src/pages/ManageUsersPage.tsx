@@ -4,7 +4,7 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Switch } from "../components/ui/switch";
-import { Users } from "lucide-react";
+import { Trash2, Users } from "lucide-react";
 
 type AccountData = {
   uid: string;
@@ -29,6 +29,8 @@ export default function ManageUsersPage({ user }: { user: User }) {
   const [roleModal, setRoleModal] = useState<{ uid: string; open: boolean } | null>(null);
   const [roleValue, setRoleValue] = useState<"admin" | "user">("user");
   const [updatingRole, setUpdatingRole] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<{ uid: string; open: boolean } | null>(null);
+  const [deletingUser, setDeletingUser] = useState(false);
 
   const usd = useMemo(
     () =>
@@ -61,6 +63,61 @@ export default function ManageUsersPage({ user }: { user: User }) {
   function closeRoleModal() {
     setUpdatingRole(false);
     setRoleModal(null);
+  }
+
+  function openDeleteModal(uid: string) {
+    setRemoteError(null);
+    setDeleteModal({ uid, open: true });
+  }
+
+  function closeDeleteModal() {
+    setDeletingUser(false);
+    setDeleteModal(null);
+  }
+
+  async function deleteUserByUid(uid: string) {
+    const idToken = await user.getIdToken();
+    const res = await fetch(`/api/admin/accounts/${encodeURIComponent(uid)}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+      },
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Request failed: ${res.status}`);
+    }
+    return (await res.json()) as {
+      ok?: boolean;
+      uid?: string;
+      deleted?: {
+        memories?: number;
+        apiKeys?: number;
+        otps?: number;
+        accountDoc?: number;
+        authUser?: number;
+      };
+    };
+  }
+
+  async function submitDeleteUser() {
+    if (!deleteModal?.open) return;
+    const uid = deleteModal.uid;
+    if (uid === user.uid) {
+      setRemoteError("You can’t delete your own account from this page.");
+      return;
+    }
+
+    setDeletingUser(true);
+    setRemoteError(null);
+    try {
+      await deleteUserByUid(uid);
+      setAccounts((prev) => prev.filter((a) => a.uid !== uid));
+      closeDeleteModal();
+    } catch (e) {
+      setRemoteError(e instanceof Error ? e.message : "Failed to delete user");
+      setDeletingUser(false);
+    }
   }
 
   async function setDisabledForUid(uid: string, disabled: boolean) {
@@ -225,6 +282,11 @@ export default function ManageUsersPage({ user }: { user: User }) {
     return copy;
   }, [accounts]);
 
+  const deleteTarget = useMemo(() => {
+    if (!deleteModal?.open) return null;
+    return accounts.find((a) => a.uid === deleteModal.uid) || null;
+  }, [accounts, deleteModal]);
+
   if (!isAdmin) {
     return (
       <div className="p-4 md:p-12 max-w-4xl mx-auto">
@@ -309,7 +371,21 @@ export default function ManageUsersPage({ user }: { user: User }) {
                           disabled={Boolean(updatingDisabled[a.uid])}
                         />
                       </td>
-                      <td className="py-3 pr-4 font-mono text-xs whitespace-nowrap">{a.uid}</td>
+                      <td className="py-3 pr-4 font-mono text-xs whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <span className="break-all">{a.uid}</span>
+                          <button
+                            type="button"
+                            onClick={() => openDeleteModal(a.uid)}
+                            className="ml-1 inline-flex items-center justify-center h-7 w-7 rounded-md border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/15 disabled:opacity-60"
+                            disabled={a.uid === user.uid}
+                            aria-label={a.uid === user.uid ? "You can’t delete yourself" : "Delete user"}
+                            title={a.uid === user.uid ? "You can’t delete yourself" : "Delete user"}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -428,6 +504,64 @@ export default function ManageUsersPage({ user }: { user: User }) {
                 disabled={updatingRole}
               >
                 Update
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {deleteModal?.open ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/60"
+            onClick={() => {
+              if (!deletingUser) closeDeleteModal();
+            }}
+            aria-label="Close"
+          />
+          <div className="relative w-full max-w-md rounded-2xl bg-zinc-900 border border-zinc-800 shadow-xl">
+            <div className="p-6 border-b border-zinc-800">
+              <div className="text-lg font-semibold text-zinc-100">Delete user</div>
+              <div className="text-sm text-zinc-400 mt-1">
+                This permanently deletes the user’s account record and related data.
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+                <div className="text-sm text-zinc-300">
+                  <span className="text-zinc-500">Name:</span> {deleteTarget?.name || "—"}
+                </div>
+                <div className="text-sm text-zinc-300">
+                  <span className="text-zinc-500">Email:</span> {deleteTarget?.email || "—"}
+                </div>
+                <div className="text-sm text-zinc-300 font-mono break-all">
+                  <span className="text-zinc-500 font-sans">UID:</span> {deleteModal.uid}
+                </div>
+              </div>
+              <div className="text-sm text-red-300">
+                This action can’t be undone.
+              </div>
+              {remoteError ? (
+                <div className="text-sm text-red-400 whitespace-pre-wrap break-words">{remoteError}</div>
+              ) : null}
+            </div>
+            <div className="p-6 pt-0 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                className="px-4 py-2 rounded-lg bg-zinc-800 text-zinc-100 hover:bg-zinc-700 transition-colors"
+                disabled={deletingUser}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitDeleteUser}
+                className="px-4 py-2 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 transition-colors disabled:opacity-60"
+                disabled={deletingUser || deleteModal.uid === user.uid}
+              >
+                Delete user
               </button>
             </div>
           </div>

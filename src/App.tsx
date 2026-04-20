@@ -34,7 +34,7 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
-          const idToken = await user.getIdToken();
+          const idToken = await user.getIdToken(true);
           const res = await fetch("/api/account/ensure", {
             method: "POST",
             headers: {

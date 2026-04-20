@@ -18,7 +18,24 @@ export function registerAccountEndpoints(app: Express) {
     try {
       const existing = await store.readAccount(uid);
       if (existing) {
-        return res.json({ created: false, uid });
+        const token = req.user;
+
+        const tokenName = typeof token?.name === "string" ? token.name.trim() : "";
+        const tokenEmail = typeof token?.email === "string" ? token.email.trim() : "";
+        const tokenPictureUrl = typeof token?.picture === "string" ? token.picture.trim() : "";
+
+        const updates: Record<string, unknown> = {};
+        if (tokenName && tokenName !== existing.name) updates.name = tokenName;
+        if (tokenEmail && tokenEmail !== (existing.email || "")) updates.email = tokenEmail;
+        if (tokenPictureUrl && tokenPictureUrl !== (existing.pictureUrl || "")) {
+          updates.pictureUrl = tokenPictureUrl;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          await store.updateAccount(uid, updates as any);
+        }
+
+        return res.json({ created: false, uid, updated: Object.keys(updates) });
       }
       const token = req.user;
       await store.createAccount({

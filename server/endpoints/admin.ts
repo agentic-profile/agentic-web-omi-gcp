@@ -1,8 +1,21 @@
 import { Express, NextFunction, Request, Response } from "express";
 import { authenticate, requireAdmin } from "../middleware.ts";
 import { resolveAccountStore } from "../stores/accounts/index.ts";
+import { admin, adminDb } from "../firebase.ts";
 
-const FIXUP_EMAIL = "mike@example.com";
+const FIXUP_EMAIL = "mike@mobido.com";
+
+async function deleteQueryInBatches(query: FirebaseFirestore.Query): Promise<number> {
+  let deleted = 0;
+  while (true) {
+    const snap = await query.limit(500).get();
+    if (snap.empty) return deleted;
+    const batch = adminDb.batch();
+    for (const doc of snap.docs) batch.delete(doc.ref);
+    await batch.commit();
+    deleted += snap.size;
+  }
+}
 
 
 export function registerAdminEndpoints(app: Express) {
@@ -93,6 +106,56 @@ export function registerAdminEndpoints(app: Express) {
       } catch (e) {
         console.error("[API] POST /api/admin/accounts/:uid/disabled", e);
         res.status(500).json({ error: "Failed to update disabled flag" });
+      }
+    }
+  );
+
+  app.delete(
+    "/api/admin/accounts/:uid",
+    authenticate,
+    requireAdmin,
+    async (req: Request, res: Response, _next: NextFunction) => {
+      const { uid } = req.params;
+      if (!uid || typeof uid !== "string") {
+        return res.status(400).json({ error: "Missing uid" });
+      }
+
+      try {
+        const existing = await store.readAccount(uid as any);
+        if (!existing) {
+          return res.status(404).json({ error: "Account not found" });
+        }
+
+        const [memoriesDeleted, apiKeysDeleted, otpsDeleted] = await Promise.all([
+          deleteQueryInBatches(adminDb.collection("memories").where("userId", "==", uid)),
+          deleteQueryInBatches(adminDb.collection("apiKeys").where("userId", "==", uid)),
+          deleteQueryInBatches(adminDb.collection("otps").where("userId", "==", uid)),
+        ]);
+
+        await store.deleteAccount(uid as any);
+
+        let authDeleted = false;
+        try {
+          await admin.auth().deleteUser(uid);
+          authDeleted = true;
+        } catch (e: any) {
+          if (e?.code !== "auth/user-not-found") throw e;
+        }
+
+        return res.json({
+          ok: true,
+          uid,
+          deleted: {
+            memories: memoriesDeleted,
+            apiKeys: apiKeysDeleted,
+            otps: otpsDeleted,
+            accountDoc: 1,
+            authUser: authDeleted ? 1 : 0,
+          },
+        });
+      } catch (e) {
+        console.error("[API] DELETE /api/admin/accounts/:uid", e);
+        return res.status(500).json({ error: "Failed to delete account" });
       }
     }
   );
