@@ -7,6 +7,7 @@ import {
 } from "@agentic-profile/a2a-mcp-express";
 import log from "../../utils/log.ts";
 import { handleStartChat } from "./handle-start-chat.js";
+import { handleUpdateResolution } from "./handle-update-resolution.js";
 
 
 export async function toolsCall(
@@ -23,6 +24,8 @@ export async function toolsCall(
     switch (name) {
         case "start_chat":
             return await handleStartChat(req, context);
+        case "update_chat_resolution":
+            return await handleUpdateResolution(req, context);
         default:
             return jrpcError(req.id!, -32601, `Tool ${name} not found`);
     }

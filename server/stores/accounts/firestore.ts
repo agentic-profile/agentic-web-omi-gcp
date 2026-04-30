@@ -23,7 +23,7 @@ export class FirestoreAccountStore implements AccountStore {
             const snapshot = await this.db.collection(COLLECTION).where("agentDid", "==", did).limit(1).get();
             if (snapshot.empty) return null;
             const doc = snapshot.docs[0];
-            return { uid: doc.id as any, ...doc.data() } as Account;
+            return { ...(doc.data() as any), uid: doc.id as any } as Account;
         } catch (error) {
             handleFirestoreError(error, OperationType.GET, COLLECTION);
             throw error;
@@ -35,7 +35,7 @@ export class FirestoreAccountStore implements AccountStore {
             const snapshot = await this.db.collection(COLLECTION).where("email", "==", email).limit(1).get();
             if (snapshot.empty) return null;
             const doc = snapshot.docs[0];
-            return { uid: doc.id as any, ...doc.data() } as Account;
+            return { ...(doc.data() as any), uid: doc.id as any } as Account;
         } catch (error) {
             handleFirestoreError(error, OperationType.GET, COLLECTION);
             throw error;
@@ -46,7 +46,7 @@ export class FirestoreAccountStore implements AccountStore {
         try {
             const doc = await this.db.collection(COLLECTION).doc(String(uid)).get();
             if (!doc.exists) return null;
-            return { uid: doc.id as any, ...doc.data() } as Account;
+            return { ...(doc.data() as any), uid: doc.id as any } as Account;
         } catch (error) {
             handleFirestoreError(error, OperationType.GET, `${COLLECTION}/${uid}`);
             throw error;
@@ -56,7 +56,7 @@ export class FirestoreAccountStore implements AccountStore {
     async listAccounts(): Promise<Account[]> {
         try {
             const snapshot = await this.db.collection(COLLECTION).get();
-            return snapshot.docs.map(doc => ({ uid: doc.id as any, ...doc.data() } as Account));
+            return snapshot.docs.map((doc) => ({ ...(doc.data() as any), uid: doc.id as any } as Account));
         } catch (error) {
             handleFirestoreError(error, OperationType.LIST, COLLECTION);
             throw error;

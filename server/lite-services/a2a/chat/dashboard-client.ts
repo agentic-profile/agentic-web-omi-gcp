@@ -3,7 +3,7 @@ import { DID, parseDid, prettyJson } from "@agentic-profile/common";
 
 import log from "../../../utils/log.ts";
 import { ChatResolutionPair } from "./reply.js";
-import { resolveAgent } from "../../../utils/agent.ts";
+import { resolveAgent, resolveAgenticProfile } from "../../../utils/agent.ts";
 import { ChatResolution, Message } from "../../../types/chat.ts";
 import { truncate } from "../../../utils/misc.ts";
 
@@ -54,7 +54,7 @@ export async function updateDashboard( prevResolutions: ChatResolutionPair, chat
         return prevResolutions;
     }
 
-    const notification = buildDashboardNotification( prevResolutions, chat, peerDid );
+    const notification = await buildDashboardNotification( prevResolutions, chat, peerDid );
     //log.info( 'updateDashboard(2)', prettyJson({chat,notification}));
 
     let serviceUrl;
@@ -85,65 +85,54 @@ export async function updateDashboard( prevResolutions: ChatResolutionPair, chat
 // Craft a notification message
 //
 
-function formatResolutionValue( value: unknown ): string {
-    if( value === true ) return 'yes';
-    if( value === false ) return 'no';
-    if( value === null || value === undefined ) return 'none';
-    if( typeof value === 'object' )
-        return truncate( prettyJson( value ), 120 );
-    return String( value );
+function resolveCurrentResolution(
+    prev: ChatResolution | null | undefined,
+    update: ChatResolution | null | undefined,
+): ChatResolution | null | undefined {
+    if( update === undefined )
+        return prev;
+    return update;
 }
 
-function summarizeResolutionDelta(
-    before: ChatResolution | null | undefined,
-    after: ChatResolution | null | undefined,
-): string {
-    if( after === undefined )
-        return 'unchanged';
-    if( after === null )
-        return before == null ? 'resolution cleared' : `resolution cleared (was ${formatResolutionSnapshot( before )})`;
-    if( before == null )
-        return `resolution set to ${formatResolutionSnapshot( after )}`;
-
-    const beforeRec = before as Record<string, unknown>;
-    const afterRec = after as Record<string, unknown>;
-    const keys = new Set( [ ...Object.keys( beforeRec ), ...Object.keys( afterRec ) ] );
-    const changes: string[] = [];
-    for( const key of keys ) {
-        const b = beforeRec[key];
-        const a = afterRec[key];
-        if( prettyJson( b ) !== prettyJson( a ) )
-            changes.push( `${key}: ${formatResolutionValue( b )} → ${formatResolutionValue( a )}` );
-    }
-    return changes.length ? changes.join( '; ' ) : 'unchanged';
-}
-
-function formatResolutionSnapshot( res: ChatResolution | null | undefined ): string {
-    if( res === null || res === undefined )
-        return 'none';
-    const entries = Object.entries( res ).filter( ( [, v] ) => v !== undefined );
-    if( !entries.length )
-        return '{}';
-    return entries.map( ( [ k, v ] ) => `${k}=${formatResolutionValue( v )}` ).join( ', ' );
+function likeValue( resolution: ChatResolution | null | undefined ): boolean {
+    return Boolean( resolution && typeof resolution === 'object' && (resolution as any).like === true );
 }
 
 /** Human-readable summary for the dashboard MCP `update` tool. */
-export function buildDashboardNotification(
+export async function buildDashboardNotification(
     prev: ChatResolutionPair,
     updates: ChatResolutionPair,
     peerAgentDid: DID,
-): NonNullable<UpdateDashboardPayload['notification']> {
-    const lines: string[] = [];
-    if( updates.agentResolution !== undefined )
-        lines.push( `Your agent: ${summarizeResolutionDelta( prev.agentResolution, updates.agentResolution )}.` );
-    if( updates.peerResolution !== undefined )
-        lines.push( `Peer agent: ${summarizeResolutionDelta( prev.peerResolution, updates.peerResolution )}.` );
+): Promise<NonNullable<UpdateDashboardPayload['notification']>> {
+    const currentAgentResolution = resolveCurrentResolution( prev.agentResolution, updates.agentResolution );
+    const currentPeerResolution = resolveCurrentResolution( prev.peerResolution, updates.peerResolution );
 
-    const body = lines.join( ' ' );
-    const title = lines.length > 1 ? 'Chat resolutions updated' : 'Chat resolution updated';
+    const youLikeThem = likeValue( currentAgentResolution );
+    const theyLikeYou = likeValue( currentPeerResolution );
+
+    const peerName = await resolvePeerName( peerAgentDid );
+
+    const title =
+        youLikeThem && theyLikeYou
+            ? `${peerName} likes you, and you like them too!`
+            : youLikeThem
+              ? "You like ${peerName}"
+              : theyLikeYou
+                ? `${peerName} likes you`
+                : "Still gossiping with ${peerName} - no likes yet";
     return {
         title,
-        subtitle: truncate( peerAgentDid, 56 ),
-        body,
+        body: 'Tap on the chat to view the full conversation'
     };
+}
+
+async function resolvePeerName( peerAgentDid: DID ): Promise<string> {
+    try {
+        const peerEntityDid = parseDid(peerAgentDid).did;
+        return (await resolveAgenticProfile(peerEntityDid)).name;
+    } catch( error ) {
+        log.debug('Failed to resolve peer name from DID doc', { peerAgentDid, error });
+    }
+
+    return truncate( peerAgentDid, 56 );  // ugh
 }
