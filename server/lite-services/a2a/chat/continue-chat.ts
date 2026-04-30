@@ -1,17 +1,17 @@
 import { ChatResolutionPair, generateReply } from './reply.js';
-import { resolveAgent } from '../../utils/agent.js';
-import { a2aFetch, createA2aSendMessageRequest } from '../../lite-clients/a2a-client.js';
-import { AuthContext } from '../../lite-clients/client.js';
-import { createProfileResolver } from '../../utils/auth.js';
+import { resolveAgent } from '../../../utils/agent.ts';
+import { a2aFetch, createA2aSendMessageRequest } from '../../../lite-clients/a2a-client.ts';
+import { AuthContext } from '../../../lite-clients/client.ts';
+import { createProfileResolver } from '../../../utils/auth.ts';
 import { createInMemoryAuthTokenCache } from '@agentic-profile/a2a-mcp-express';
 import { UserID, DID, prettyJson } from '@agentic-profile/common';
-import { truncate } from '../../utils/misc.js';
-import log from '../../utils/log.js';
-import { resolveAgentChatsStore } from '../../stores/agent-chats/index.js';
-import { AgentPair, Message, MessageMetadata } from '../../stores/agent-chats/types.js';
+import { truncate } from '../../../utils/misc.ts';
+import log from '../../../utils/log.ts';
+import { resolveAgentChatsStore } from '../../../stores/agent-chats/index.ts';
+import { AgentPair, Message, MessageMetadata } from '../../../types/chat.ts';
 import { updateDashboard } from './dashboard-client.js';
 import { getChatDetailUrl, textToParts } from './misc.js';
-import { UpdateAgentChatParams } from '../../stores/agent-chats/types.js';
+import { UpdateAgentChatParams } from '../../../types/chat.ts';
 
 
 const agentChatsStore = resolveAgentChatsStore();
@@ -33,7 +33,7 @@ export interface ContinueChatResult {
 }
 
 export async function continueChat( params: ContinueChatParams ): Promise<ContinueChatResult> {
-    //log.info( 'continueChat()', prettyJson(params) );
+    log.info( 'continueChat()', prettyJson(params) );
     const { uid, agentDid, peerDid, envelopeOptions } = params;
 
     //

@@ -1,9 +1,8 @@
 import type { Express } from "express";
 import { authenticate } from "../middleware.ts";
-import { continueChat } from "../a2a/chat/continue-chat.ts";
-import { ensureAgentOwnerInGoodStanding } from "../a2a/chat/misc.ts";
+import { ensureAgentOwnerInGoodStanding } from "../lite-services/a2a/chat/misc.js";
 import { resolveAgentChatsStore } from "../stores/agent-chats/index.ts";
-import { updateChat } from "../a2a/chat/continue-chat.ts";
+import { continueChat, updateChat } from "../lite-services/a2a/chat/continue-chat.js";
 
 export function registerAgentChatsEndpoints(app: Express) {
   const store = resolveAgentChatsStore();

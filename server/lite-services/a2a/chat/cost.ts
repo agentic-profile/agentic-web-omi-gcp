@@ -1,4 +1,4 @@
-import log from '../../utils/log.js';
+import log from '../../../utils/log.ts';
 
 export type UsageMetadata = {
     promptTokenCount?: number;

@@ -1,6 +1,6 @@
 import { adminDb, handleFirestoreError, OperationType } from "../../firebase.js";
 import { type UserID, prettyJson } from "@agentic-profile/common";
-import type { AgentChat, AgentChatsStore, AgentPair, UpdateAgentChatParams } from "./types.js";
+import type { AgentChat, AgentChatsStore, AgentPair, UpdateAgentChatParams } from "../../types/chat.js";
 import { applyAgentChatUpdate, mergeWithAgentPair } from "./apply-agent-chat-update.js";
 import log from "@/server/utils/log.js";
 

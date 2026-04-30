@@ -4,7 +4,7 @@ import {
     AgentPair,
     Message,
     UpdateAgentChatParams,
-} from "./types.js";
+} from "../../types/chat.js";
 
 /**
  * Merge a persisted document with the lookup pair. Older rows only stored

@@ -1,10 +1,11 @@
 import { DID, parseDid } from '@agentic-profile/common';
-import { resolveAccountStore } from "../../stores/accounts/index.ts";
-import log from "../../utils/log.js";
-import { appUrl } from '../../utils/http.js';
+import { resolveAccountStore } from "../../../stores/accounts/index.ts";
+import log from "../../../utils/log.js";
+import { appUrl } from '../../../utils/http.js';
 import { Request } from 'express';
-import { Part } from '@/server/stores/agent-chats/types.ts';
-import { Account } from '../../stores/accounts/types.ts';
+import { Part } from '@/server/types/chat.ts';
+import { Account } from '../../../stores/accounts/types.ts';
+import { ServerError } from '../../../types/error.ts';
 
 const accountStore = resolveAccountStore();
 
@@ -30,17 +31,17 @@ export function resolveSender( from: DID | undefined, peerDid: DID ): DID {
 export async function ensureAgentOwnerInGoodStanding( agentDid: DID ) {
     const account = await accountStore.readAccountByAgentDid( agentDid );
     if( !account )
-        throw new Error(`Account not found for ${agentDid}`);
+        throw new ServerError({ kind: 'Conflict', message: `Account not found for ${agentDid}` });
     return ensureAccountInGoodStanding( account );
 }
 
 export function ensureAccountInGoodStanding( account: Account ) {
     const { uid, name, credits, disabled, agentDid } = account;
     if( disabled )
-        throw new Error(`Agent owner ${uid} account is disabled`);
+        throw new ServerError({ kind: 'Conflict', message: `Agent owner ${uid} account is disabled` });
     if( credits <= 0 ) {
         log.warn(`Agent owners account has insufficient credit`);
-        throw new Error(`Agent ${agentDid} owner ${uid} has insufficient credit`);
+        throw new ServerError({ kind: 'Conflict', message: `Agent ${agentDid} owner ${uid} has insufficient credit` });
     }
 
     return { uid, name, credits, account };

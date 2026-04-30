@@ -1,16 +1,16 @@
 import { DID, prettyJson } from '@agentic-profile/common';
 import { CreateChatParameters, GoogleGenAI } from "@google/genai";
-import log from '../../utils/log.js';
-import { truncate } from '../../utils/misc.js';
+import log from '../../../utils/log.js';
+import { truncate } from '../../../utils/misc.js';
 import {
-    AgentChat, AgentPair, Part, Message, UpdateAgentChatParams,
+    AgentChat, AgentPair, Message, UpdateAgentChatParams,
     MessageMetadata, ChatResolution
-} from '../../stores/agent-chats/types.js';
-import { extractJson } from '../../utils/json.js';
+} from '../../../types/chat.js';
+import { extractJson } from '../../../utils/json.js';
 import type { AgentMessageEnvelope } from '@agentic-profile/a2a-mcp-express';
 import { createSystemPrompt } from '../../a2a/chat/prompt-templates.js';
-import { resolveAgentChatsStore } from "../../stores/agent-chats/index.js";
-import { resolveAccountStore } from "../../stores/accounts/index.js";
+import { resolveAgentChatsStore } from "../../../stores/agent-chats/index.js";
+import { resolveAccountStore } from "../../../stores/accounts/index.js";
 import { resolveSender, ensureAgentOwnerInGoodStanding, textToParts, partsToText } from './misc.js';
 import { computeTokenCost, UsageMetadata } from './cost.js';
 

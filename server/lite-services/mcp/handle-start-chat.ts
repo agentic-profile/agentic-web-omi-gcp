@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import log from '../utils/log.js';
+import log from '../../utils/log.ts';
 import {
     jrpcErrorAuthRequired, 
     jrpcResult, 
@@ -8,30 +8,37 @@ import {
     JsonRpcResponse
 } from '@agentic-profile/a2a-mcp-express';
 
-import { prettyJson, parseDid } from '@agentic-profile/common';
-import type { StartChatQueueMessage } from "../queue/types.js";
-import { resolveAgentChatsStore } from "../stores/agent-chats/index.js";
-import { AgentPair } from '../stores/agent-chats/types.js';
-import { ensureAgentOwnerInGoodStanding } from './chat/misc.js';
-import { continueChat } from './chat/continue-chat.ts';
-import { manageChatUrl } from './chat/misc.js';
+import { parseDid, DID } from '@agentic-profile/common';
+import type { StartChatQueueMessage } from "../../queue/types.js";
+import { resolveAgentChatsStore } from "../../stores/agent-chats/index.ts";
+import { AgentPair } from '../../types/chat.js';
+import { ensureAgentOwnerInGoodStanding } from '../a2a/chat/misc.js';
+import { continueChat } from '../a2a/chat/continue-chat.ts';
+import { manageChatUrl } from '../a2a/chat/misc.js';
 
 const agentChatsStore = resolveAgentChatsStore();
 
+// start a chat between two agents
+interface StartChatArguments {
+    agentDid: DID;
+    peerDid: DID;
+    posthaste?: boolean
+}
+
 /**
- * Handle an A2A CreateTask (new type) request.  This may do the task immediately, 
+ * Handle an MCP CreateChat (new type) request.  This may do the task immediately, 
  * or it may queue it for later execution.
  * @param jrpcRequest 
  * @param param1 
  * @returns 
  */
-export async function handleA2aCreateTask(jrpcRequest: JsonRpcRequest, {session, req}: JsonRpcRequestContext): Promise<JsonRpcResponse> {
+export async function handleStartChat(jrpcRequest: JsonRpcRequest, {session, req}: JsonRpcRequestContext): Promise<JsonRpcResponse> {
     if( !session )
         return jrpcErrorAuthRequired( jrpcRequest.id! );
 
-    const task = jrpcRequest.params?.task as A2aStartChatTask;
-    log.info( 'CreateTask params', prettyJson(task) );
-    const { agentDid, peerDid } = task;
+    const { agentDid, peerDid, posthaste } = (jrpcRequest.params?.arguments ?? {}) as StartChatArguments;
+    if(!posthaste) 
+        log.info('Chat start is posthaste!');
 
     // Ensure the entity that requested the task (session.agentDid) has authority
     // to start a chat for the given userAgentDid
@@ -53,14 +60,9 @@ export async function handleA2aCreateTask(jrpcRequest: JsonRpcRequest, {session,
     if( like === true || like === false ) {
         log.info(`Chat ${chatId} has already concluded on my part: ${like}`);
         return jrpcResult(jrpcRequest.id!,{
-            task: {
-                id: uuidv4(),
-                contextId: `${agentDid}^${peerDid}`,
-                status: {
-                    state: "TASK_STATE_COMPLETED",
-                },
-                manageUrl
-            }
+            status: "completed",
+            resolution: chat?.agentResolution,
+            manageUrl
         });
     }
 
@@ -77,21 +79,7 @@ export async function handleA2aCreateTask(jrpcRequest: JsonRpcRequest, {session,
     await continueChat( message );  // skip queue!!
 
     return jrpcResult(jrpcRequest.id!,{
-        task: {
-            id: message.taskId,
-            contextId: `${agentDid}^${peerDid}`,
-            manageUrl
-        }
+        status: "continued",
+        manageUrl
     });
-}
-
-//
-// A2A Task types
-//
-
-// start a chat between two agents
-interface A2aStartChatTask {
-    kind: "start-chat";
-    agentDid: string;
-    peerDid: string;
 }

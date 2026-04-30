@@ -1,7 +1,5 @@
-import { replacePlaceholders } from "../../utils/template.js";
-import { Account } from "../../stores/accounts/types.js";
-import log from "../../utils/log.js";
-import { prettyJson } from "@agentic-profile/common";
+import { replacePlaceholders } from "../../../utils/template.js";
+import { Account } from "../../../stores/accounts/types.js";
 
 
 const DEFAULT_INSTRUCTION_TEMPLATE = `# Role
@@ -35,11 +33,9 @@ If there is very good synergy or compatibility, then do three things:
 
 
 export function createSystemPrompt( { chat_instruction, introduction, name = "A person" }: Account ) {
-    const template = chat_instruction.trim() || DEFAULT_INSTRUCTION_TEMPLATE;
-    const context = { name, summary: introduction };
+    const template = chat_instruction?.trim() || DEFAULT_INSTRUCTION_TEMPLATE;
+    const context = { name, summary: introduction || "coming soon!" };
     const prompt = replacePlaceholders({ template, context });
 
-    //log.info(`createSystemPrompt() prompt: ${prettyJson({chat_instruction, introduction, name, prompt, template, context})}`);
     return prompt;
 }
-

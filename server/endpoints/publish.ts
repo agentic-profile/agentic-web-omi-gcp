@@ -46,8 +46,11 @@ export function registerPublishEndpoints(app: Express) {
         service: {
           id: "#friends",
           name: "Friendship Agent",
-          type: "a2a/lite",
-          serviceEndpoint: `${baseUrl}/a2a`,
+          type: "a2a+mcp/lite",
+          serviceEndpoint: [
+            `${baseUrl}/a2a`,
+            `${baseUrl}/mcp`
+          ],
           capabilityInvocation: [
             `did:web:${host}#system-key`
           ]

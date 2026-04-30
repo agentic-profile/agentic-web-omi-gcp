@@ -3,7 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 import fs from "fs";
 import { adminDb } from "../firebase";
 import { authenticate } from "../middleware";
-import { ensureAccountInGoodStanding, ensureAgentOwnerInGoodStanding } from "../a2a/chat/misc";
+import { ensureAccountInGoodStanding, ensureAgentOwnerInGoodStanding } from "../lite-services/a2a/chat/misc.js";
 import { Account } from "../stores/accounts/types";
 
 export function registerChatEndpoints(app: Express, genAI: GoogleGenAI) {

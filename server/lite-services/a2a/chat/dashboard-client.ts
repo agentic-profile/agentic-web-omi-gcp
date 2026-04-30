@@ -1,12 +1,12 @@
-import log from "../../utils/log.js";
+import log from "../../../utils/log.ts";
 import { DID, parseDid, prettyJson } from "@agentic-profile/common";
 import { ChatResolutionPair } from "./reply.js";
-import { resolveAgent } from "../../utils/agent.js";
-import { createMcpToolsCallRequest } from "../../lite-clients/mcp-client.ts";
-import { AuthContext } from "../../lite-clients/client.js";
-import { mcpFetch } from "../../lite-clients/mcp-client.ts";
-import { ChatResolution, Message } from "../../stores/agent-chats/types.js";
-import { truncate } from "../../utils/misc.js";
+import { resolveAgent } from "../../../utils/agent.ts";
+import { createMcpToolsCallRequest } from "../../../lite-clients/mcp-client.ts";
+import { AuthContext } from "../../../lite-clients/client.ts";
+import { mcpFetch } from "../../../lite-clients/mcp-client.ts";
+import { ChatResolution, Message } from "../../../types/chat.ts";
+import { truncate } from "../../../utils/misc.ts";
 
 
 export interface DashboardChatUpdate {

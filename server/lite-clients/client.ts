@@ -44,7 +44,7 @@ export async function liteFetch<T extends RpcBody>( url: string, request: T, aut
     
     const { status, statusText } = fetchResult.fetchResponse ?? {};
     if( !status || status < 200 || status >= 300 )
-        throw new Error(`Failed to send request to ${url}: ${status}${statusText}`);
+        throw new Error(`Failed to send request to ${url}: ${status} ${statusText}`);
 
     return fetchResult;
 }

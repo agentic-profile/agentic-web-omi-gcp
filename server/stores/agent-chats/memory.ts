@@ -1,4 +1,4 @@
-import { AgentChat, AgentChatsStore, AgentPair, UpdateAgentChatParams } from "./types.js";
+import { AgentChat, AgentChatsStore, AgentPair, UpdateAgentChatParams } from "../../types/chat.js";
 import type { UserID } from "@agentic-profile/common";
 import { applyAgentChatUpdate } from "./apply-agent-chat-update.js";
 
