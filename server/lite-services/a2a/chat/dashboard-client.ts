@@ -1,10 +1,9 @@
-import log from "../../../utils/log.ts";
+import { createMcpToolsCallRequest, mcpFetch, AuthContext } from "@agentic-profile/a2a-mcp-express";
 import { DID, parseDid, prettyJson } from "@agentic-profile/common";
+
+import log from "../../../utils/log.ts";
 import { ChatResolutionPair } from "./reply.js";
 import { resolveAgent } from "../../../utils/agent.ts";
-import { createMcpToolsCallRequest } from "../../../lite-clients/mcp-client.ts";
-import { AuthContext } from "../../../lite-clients/client.ts";
-import { mcpFetch } from "../../../lite-clients/mcp-client.ts";
 import { ChatResolution, Message } from "../../../types/chat.ts";
 import { truncate } from "../../../utils/misc.ts";
 

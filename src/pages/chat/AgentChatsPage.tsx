@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import type { User } from "firebase/auth";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2, MessageSquare, RefreshCw } from "lucide-react";
 import { Card } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
 import { LoginModal } from "@/src/components/LoginModal";
@@ -149,19 +149,22 @@ export default function AgentChatsPage({
             <p className="p-10 text-center text-zinc-500">No agent chats yet. Chats appear here when your agents message other agents.</p>
           </Card>
         ) : (
-          <section className="space-y-0.5" aria-label="Agent chats list">
-            <div className="hidden md:grid grid-cols-[1fr_1fr_10rem_10rem_5rem_12rem] gap-3 px-3 text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
-              <span>Your agent</span>
-              <span>Peer agent</span>
-              <span>Created</span>
-              <span>Updated</span>
-              <span className="text-right">Msgs</span>
-              <span>Resolution</span>
+          <section className="space-y-0" aria-label="Agent chats list">
+            <div className="hidden lg:grid lg:grid-cols-[2rem_minmax(0,1.25fr)_minmax(0,1.25fr)_minmax(0,6rem)_minmax(0,6rem)_4.5rem_minmax(0,1fr)] xl:grid-cols-[2rem_minmax(0,1.25fr)_minmax(0,1.25fr)_minmax(0,7.5rem)_minmax(0,7.5rem)_4.5rem_minmax(0,1fr)] 2xl:grid-cols-[2rem_minmax(0,1.25fr)_minmax(0,1.25fr)_minmax(0,10rem)_minmax(0,10rem)_4.5rem_minmax(0,1fr)] gap-x-2 gap-y-1 px-3 text-[11px] font-semibold uppercase tracking-widest text-zinc-500 items-end">
+              <span aria-hidden />
+              <span className="min-w-0">Your agent</span>
+              <span className="min-w-0">Peer agent</span>
+              <span className="min-w-0 break-words leading-tight">Created</span>
+              <span className="min-w-0 break-words leading-tight">Updated</span>
+              <span className="text-right shrink-0">Msgs</span>
+              <span className="min-w-0">Resolution</span>
             </div>
 
-            {sortedChats.map((c) => (
-              <AgentRow chat={c} />
-            ))}
+            <div className="divide-y-1 divide-white">
+              {sortedChats.map((c) => (
+                <AgentRow chat={c} />
+              ))}
+            </div>
           </section>
         )}
       </main>
@@ -175,49 +178,67 @@ function AgentRow({ chat }: { chat: AgentChatRecord }) {
   return (
     <Link
       to={detailHref(chat)}
-      className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/60 rounded-xl"
+      className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
     >
-      <Card className="border-zinc-800 bg-zinc-900/40 hover:bg-zinc-900/60 transition-colors">
-        {/* Minimal padding: keep only a tiny horizontal inset for readability */}
-        <div className="px-1 md:px-1.5">
-          <section className="md:hidden space-y-0 py-0">
+      <div className="bg-transparent hover:bg-zinc-900/40 transition-colors">
+        <div className="px-1 md:px-1.5 py-1">
+          <section className="lg:hidden space-y-2 py-2 px-2">
             <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
+              <div className="min-w-0 flex items-start gap-2">
+                <span className="shrink-0 mt-0.5 text-zinc-500 group-hover:text-white transition-colors" aria-hidden>
+                  <MessageSquare size={20} />
+                </span>
                 <div className="text-[11px] text-zinc-500 mb-0.5">Your agent</div>
-                <DIDLink did={chat.agentDid} />
+                <div className="min-w-0">
+                  <DIDLink did={chat.agentDid} />
+                </div>
               </div>
               <span className="text-xs text-zinc-400 tabular-nums shrink-0">{chat.messages?.length ?? 0} msgs</span>
             </div>
 
-            <div className="border-t border-zinc-800/70 pt-0">
+            <div className="border-t border-zinc-800/70 pt-2">
               <div className="text-[11px] text-zinc-500 mb-0.5">Peer agent</div>
               <DIDLink did={chat.peerDid} />
             </div>
 
-            <p className="text-[11px] text-zinc-500">
-              Created {formatWhen(chat.created)} · Updated {formatWhen(chat.updated)}
-            </p>
-            <p className="text-[11px] text-zinc-500">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-zinc-500 border-t border-zinc-800/70 pt-2">
+              <p className="min-w-0 break-words">
+                <span className="text-zinc-600 block uppercase tracking-wide text-[10px]">Created</span>
+                {formatWhen(chat.created)}
+              </p>
+              <p className="min-w-0 break-words">
+                <span className="text-zinc-600 block uppercase tracking-wide text-[10px]">Updated</span>
+                {formatWhen(chat.updated)}
+              </p>
+            </div>
+            <p className="text-[11px] text-zinc-500 break-words">
               You: {resolutionHint(chat.agentResolution)} · Peer: {resolutionHint(chat.peerResolution)}
             </p>
           </section>
 
-          <div className="hidden md:grid grid-cols-[1fr_1fr_10rem_10rem_5rem_12rem] gap-3 items-center py-0.5">
+          <div className="hidden lg:grid lg:grid-cols-[2rem_minmax(0,1.25fr)_minmax(0,1.25fr)_minmax(0,6rem)_minmax(0,6rem)_4.5rem_minmax(0,1fr)] xl:grid-cols-[2rem_minmax(0,1.25fr)_minmax(0,1.25fr)_minmax(0,7.5rem)_minmax(0,7.5rem)_4.5rem_minmax(0,1fr)] 2xl:grid-cols-[2rem_minmax(0,1.25fr)_minmax(0,1.25fr)_minmax(0,10rem)_minmax(0,10rem)_4.5rem_minmax(0,1fr)] gap-x-2 gap-y-1 items-center py-1">
+            <div className="text-zinc-500 group-hover:text-white transition-colors flex items-center justify-center">
+              <MessageSquare size={20} aria-hidden />
+            </div>
             <div className="min-w-0">
               <DIDLink did={chat.agentDid} />
             </div>
             <div className="min-w-0">
               <DIDLink did={chat.peerDid} />
             </div>
-            <div className="text-xs text-zinc-500">{formatWhen(chat.created)}</div>
-            <div className="text-xs text-zinc-500">{formatWhen(chat.updated)}</div>
-            <div className="text-right text-sm tabular-nums text-zinc-200">{chat.messages?.length ?? 0}</div>
-            <div className="text-xs text-zinc-500 truncate">
+            <div className="min-w-0 text-xs text-zinc-500 break-words whitespace-normal leading-snug">
+              {formatWhen(chat.created)}
+            </div>
+            <div className="min-w-0 text-xs text-zinc-500 break-words whitespace-normal leading-snug">
+              {formatWhen(chat.updated)}
+            </div>
+            <div className="text-right text-sm tabular-nums text-zinc-200 shrink-0">{chat.messages?.length ?? 0}</div>
+            <div className="min-w-0 text-xs text-zinc-500 break-words leading-snug">
               Y: {resolutionHint(chat.agentResolution)} · P: {resolutionHint(chat.peerResolution)}
             </div>
           </div>
         </div>
-      </Card>
+      </div>
     </Link>
   );
 }

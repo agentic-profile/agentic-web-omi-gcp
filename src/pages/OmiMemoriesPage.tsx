@@ -70,7 +70,7 @@ export default function OmiMemoriesPage({ user }: { user: User }) {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 mb-8 md:mb-12 shrink-0">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold mb-2 flex items-center gap-3">
-            <History className="text-orange-500" size={28} md:size={32} />
+            <History className="text-orange-500 w-7 h-7 md:w-8 md:h-8" />
             Omi Memories
           </h1>
           <p className="text-zinc-400 text-sm md:text-base">View your raw device data and AI-generated summaries.</p>

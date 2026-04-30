@@ -14,6 +14,7 @@ import { LoginModal } from "@/src/components/LoginModal";
 import AgentIdentity from "@/src/components/AgentIdentity";
 import { db } from "@/src/firebase";
 import { createDidResolver, parseDid } from "@agentic-profile/common";
+import { getIdTokenOrLogout } from "@/src/auth/idToken";
 
 type ChatResolution = {
   like?: boolean | null;
@@ -298,7 +299,7 @@ export default function AgentChatsDetailPage({
       setAgentResolutionLikeUpdating(true);
       setError(null);
       try {
-        const idToken = await user.getIdToken();
+        const idToken = await getIdTokenOrLogout(user);
         const res = await fetch("/api/agent-chats/like", {
           method: "PUT",
           headers: {
@@ -338,7 +339,7 @@ export default function AgentChatsDetailPage({
       setContinuing(action);
       setError(null);
       try {
-        const idToken = await user.getIdToken();
+        const idToken = await getIdTokenOrLogout(user);
         const res = await fetch("/api/agent-chats/continue", {
           method: "POST",
           headers: {

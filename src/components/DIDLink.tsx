@@ -1,7 +1,6 @@
 import React from "react";
 import { ExternalLink } from "lucide-react";
 import { webDidToUrl } from "@agentic-profile/common";
-import { Button } from "@/src/components/ui/button";
 
 export type DIDLinkSize = "sm" | "md" | "lg";
 
@@ -29,31 +28,28 @@ export const DIDLink: React.FC<DIDLinkProps> = ({ did, size = "md" }) => {
         ? "text-base px-3 py-1.5"
         : "text-sm px-2 py-1";
 
-  const buttonClass = size === "sm" ? "h-7 w-7" : size === "lg" ? "h-9 w-9" : "h-8 w-8";
   const iconSize = size === "sm" ? 12 : size === "lg" ? 16 : 14;
 
   return (
-    <div className="flex items-center gap-2 group">
-      <span
-        className={[
-          "font-mono text-zinc-400 break-all bg-zinc-950/50 rounded border border-zinc-800/50 group-hover:border-orange-500/30 transition-colors",
-          pillClass,
-        ].join(" ")}
-      >
+    <button
+      type="button"
+      onClick={handleOpen}
+      className={[
+        "group inline-block text-left max-w-full",
+        "font-mono text-zinc-400 bg-zinc-950/50 rounded border border-zinc-800/50",
+        "hover:border-orange-500/30 hover:bg-zinc-950/70 transition-colors",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/60",
+        pillClass,
+      ].join(" ")}
+      title="Resolve DID"
+    >
+      <span className="break-all">
         {did}
+        <ExternalLink
+          size={iconSize}
+          className="inline-block align-[-2px] ml-1 text-zinc-500 group-hover:text-orange-500 transition-colors"
+        />
       </span>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={handleOpen}
-        className={[
-          buttonClass,
-          "text-zinc-500 hover:text-orange-500 hover:bg-orange-500/10 transition-all shrink-0",
-        ].join(" ")}
-        title="Resolve DID"
-      >
-        <ExternalLink size={iconSize} />
-      </Button>
-    </div>
+    </button>
   );
 };

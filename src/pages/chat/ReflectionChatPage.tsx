@@ -5,6 +5,7 @@ import { Input } from "@/src/components/ui/input";
 import { ScrollArea } from "@/src/components/ui/scroll-area";
 import { Send, Bot, User as UserIcon, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { getIdTokenOrLogout } from "@/src/auth/idToken";
 
 interface Message {
   role: "user" | "assistant";
@@ -32,7 +33,7 @@ export default function ReflectionChatPage({ user }: { user: User }) {
     setIsLoading(true);
 
     try {
-      const token = await user.getIdToken();
+      const token = await getIdTokenOrLogout(user);
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { 
@@ -60,7 +61,7 @@ export default function ReflectionChatPage({ user }: { user: User }) {
     <div className="flex flex-col h-screen bg-zinc-950">
       <header className="h-16 border-b border-zinc-800 flex items-center px-4 md:px-8 justify-between bg-zinc-900/30 backdrop-blur-md sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <Bot className="text-orange-500" size={20} md:size={24} />
+          <Bot className="text-orange-500 w-5 h-5 md:w-6 md:h-6" />
           <h2 className="font-bold text-base md:text-lg">Memory Assistant</h2>
         </div>
       </header>
@@ -70,7 +71,7 @@ export default function ReflectionChatPage({ user }: { user: User }) {
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 md:py-20 text-center">
               <div className="w-12 h-12 md:w-16 md:h-16 bg-zinc-900 rounded-2xl flex items-center justify-center mb-4 md:mb-6 border border-zinc-800">
-                <Bot className="text-zinc-500" size={24} md:size={32} />
+                <Bot className="text-zinc-500 w-6 h-6 md:w-8 md:h-8" />
               </div>
               <h3 className="text-lg md:text-xl font-semibold mb-2">How can I help you today?</h3>
               <p className="text-zinc-500 text-sm md:text-base max-w-xs md:max-w-sm">
@@ -128,7 +129,7 @@ export default function ReflectionChatPage({ user }: { user: User }) {
             disabled={!input.trim() || isLoading}
             className="absolute right-1.5 top-1.5 h-9 w-9 md:right-2 md:top-2 md:h-10 md:w-10 bg-orange-500 hover:bg-orange-600 text-black rounded-lg p-0"
           >
-            <Send size={16} md:size={18} />
+            <Send className="w-4 h-4 md:w-[18px] md:h-[18px]" />
           </Button>
         </div>
         <p className="text-center text-[9px] md:text-[10px] text-zinc-600 mt-3 uppercase tracking-widest">

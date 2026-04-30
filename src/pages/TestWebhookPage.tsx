@@ -4,6 +4,7 @@ import { Button } from "@/src/components/ui/button";
 import { Textarea } from "@/src/components/ui/textarea";
 import { toast } from "sonner";
 import { Play, Terminal, Globe } from "lucide-react";
+import { getIdTokenOrLogout } from "@/src/auth/idToken";
 
 export default function TestWebhookPage({ user }: { user: User }) {
   const [jsonInput, setJsonInput] = useState(JSON.stringify({ text: "This is a test memory from the dashboard." }, null, 2));
@@ -12,7 +13,7 @@ export default function TestWebhookPage({ user }: { user: User }) {
 
   useEffect(() => {
     if (!user?.uid) return;
-    user.getIdToken().then(token => {
+    getIdTokenOrLogout(user).then(token => {
       fetch(`/omi/api-key`, {
         headers: {
           "Authorization": `Bearer ${token}`

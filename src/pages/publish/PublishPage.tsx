@@ -11,6 +11,7 @@ import { DIDLink } from "../../components/DIDLink";
 import { base64UrlEncode } from "../../utils/misc";
 import { SelectPublisher, DEFAULT_PUBLISHER } from "./SelectPublisher";
 import { useSettingsStore } from "../../store/useSettingsStore";
+import { getIdTokenOrLogout } from "@/src/auth/idToken";
 
 export default function PublishPage({ user }: { user: User }) {
   const [agentDid, setAgentDid] = useState<string | null>(null);
@@ -29,7 +30,7 @@ export default function PublishPage({ user }: { user: User }) {
 
     const fetchPayload = async () => {
       try {
-        const token = await user.getIdToken();
+        const token = await getIdTokenOrLogout(user);
         const res = await fetch("/publish/payload", {
           headers: {
             "Authorization": `Bearer ${token}`

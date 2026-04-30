@@ -1,8 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
 import log from '../../utils/log.ts';
 import { prettyJson } from '@agentic-profile/common';
-import { truncate } from '../../utils/misc.ts';
 import {
+    AuthContext,
+    createInMemoryAuthTokenCache,
     jrpcErrorAuthRequired, 
     jrpcResult, 
     JsonRpcRequest, 
@@ -11,12 +12,11 @@ import {
     JsonRpcResponse,
     jrpcError
 } from '@agentic-profile/a2a-mcp-express';
-import { AuthContext } from '../../lite-clients/client.ts';
+
 import { createProfileResolver } from '../../utils/auth.ts';
-import { createInMemoryAuthTokenCache } from '@agentic-profile/a2a-mcp-express';
 import { updateDashboard } from './chat/dashboard-client.js';
 import { generateReply } from './chat/reply.js';
-import { ensureAgentOwnerInGoodStanding, getChatDetailUrl, partsToText, textToParts } from './chat/misc.js';
+import { getChatDetailUrl, partsToText, textToParts } from './chat/misc.js';
 import { Message } from '../../types/chat.ts';
 import { generateTaskComplete } from './misc.js';
 

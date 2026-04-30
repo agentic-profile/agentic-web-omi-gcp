@@ -1,10 +1,14 @@
+import {
+    createInMemoryAuthTokenCache,
+    a2aFetch,
+    createA2aSendMessageRequest,
+    AuthContext
+} from '@agentic-profile/a2a-mcp-express';
+import { UserID, DID, prettyJson } from '@agentic-profile/common';
+
 import { ChatResolutionPair, generateReply } from './reply.js';
 import { resolveAgent } from '../../../utils/agent.ts';
-import { a2aFetch, createA2aSendMessageRequest } from '../../../lite-clients/a2a-client.ts';
-import { AuthContext } from '../../../lite-clients/client.ts';
 import { createProfileResolver } from '../../../utils/auth.ts';
-import { createInMemoryAuthTokenCache } from '@agentic-profile/a2a-mcp-express';
-import { UserID, DID, prettyJson } from '@agentic-profile/common';
 import { truncate } from '../../../utils/misc.ts';
 import log from '../../../utils/log.ts';
 import { resolveAgentChatsStore } from '../../../stores/agent-chats/index.ts';
@@ -130,7 +134,7 @@ export async function updateChat( params: UpdateChatParams ) {
     //
     // process agent response
     //
-    const { message, task } = (data as any)?.result ?? {};
+    const { message, task, error } = (data as any)?.result ?? {};
     let userMessage: Message | undefined;
     if( message ) {
         log.info( 'updateChat() sent reply, and received message from peer', truncate(prettyJson(message),200));
@@ -157,9 +161,11 @@ export async function updateChat( params: UpdateChatParams ) {
             peerResolution: message.metadata?.resolution
         }, authContext );
     } else if( task ) {
-        log.info( `continueChat() sent reply, and received task from peer ${peerDid}: ${prettyJson(task)}` );
+        log.info( `continueChat() for ${agentDid} sent reply, and received task from peer ${peerDid}: ${prettyJson(task)}` );
+    } else if( error ) {
+        log.info( `continueChat() for ${agentDid} received error from peer ${peerDid}: ${prettyJson(error)}` );
     } else
-        throw new Error(`No message or task returned from ${peerDid}: ${prettyJson({ data })}`);
+        log.error( `continueChat() for ${agentDid} received no message, task, or error from peer ${peerDid}: ${prettyJson({ data })}` );
 
     return {
         messages: [

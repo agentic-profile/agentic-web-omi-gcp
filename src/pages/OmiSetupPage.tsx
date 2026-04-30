@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src
 import { Input } from "@/src/components/ui/input";
 import { toast } from "sonner";
 import { Copy, Check, ExternalLink, ShieldCheck, Zap, Rocket } from "lucide-react";
+import { getIdTokenOrLogout } from "@/src/auth/idToken";
 
 export default function OmiSetupPage({ user }: { user: User }) {
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ export default function OmiSetupPage({ user }: { user: User }) {
     if (!user?.uid) return;
 
     setLoading(true);
-    user.getIdToken().then(token => {
+    getIdTokenOrLogout(user).then(token => {
       return fetch(`/omi/api-key`, {
         headers: {
           "Authorization": `Bearer ${token}`

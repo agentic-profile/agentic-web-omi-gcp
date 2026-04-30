@@ -1,11 +1,12 @@
 import { DID, parseDid } from '@agentic-profile/common';
+import { ServerError } from '@agentic-profile/a2a-mcp-express';
+
 import { resolveAccountStore } from "../../../stores/accounts/index.ts";
 import log from "../../../utils/log.js";
 import { appUrl } from '../../../utils/http.js';
 import { Request } from 'express';
 import { Part } from '@/server/types/chat.ts';
 import { Account } from '../../../stores/accounts/types.ts';
-import { ServerError } from '../../../types/error.ts';
 
 const accountStore = resolveAccountStore();
 

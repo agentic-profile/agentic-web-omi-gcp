@@ -7,8 +7,8 @@ import {
     JsonRpcRequestContext, 
     JsonRpcResponse
 } from '@agentic-profile/a2a-mcp-express';
-
 import { parseDid, DID } from '@agentic-profile/common';
+
 import type { StartChatQueueMessage } from "../../queue/types.js";
 import { resolveAgentChatsStore } from "../../stores/agent-chats/index.ts";
 import { AgentPair } from '../../types/chat.js';

@@ -5,6 +5,7 @@ import { db } from "../firebase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Switch } from "../components/ui/switch";
 import { Trash2, Users } from "lucide-react";
+import { getIdTokenOrLogout } from "@/src/auth/idToken";
 
 type AccountData = {
   uid: string;
@@ -76,7 +77,7 @@ export default function ManageUsersPage({ user }: { user: User }) {
   }
 
   async function deleteUserByUid(uid: string) {
-    const idToken = await user.getIdToken();
+    const idToken = await getIdTokenOrLogout(user);
     const res = await fetch(`/api/admin/accounts/${encodeURIComponent(uid)}`, {
       method: "DELETE",
       headers: {
