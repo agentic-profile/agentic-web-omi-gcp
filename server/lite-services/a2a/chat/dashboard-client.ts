@@ -6,6 +6,7 @@ import { ChatResolutionPair } from "./reply.js";
 import { resolveAgent, resolveAgenticProfile } from "../../../utils/agent.ts";
 import { ChatResolution, Message } from "../../../types/chat.ts";
 import { truncate } from "../../../utils/misc.ts";
+import { getChatDetailUrl } from "./misc.ts";
 
 
 export interface DashboardChatUpdate {
@@ -101,11 +102,11 @@ function likeValue( resolution: ChatResolution | null | undefined ): boolean {
 /** Human-readable summary for the dashboard MCP `update` tool. */
 export async function buildDashboardNotification(
     prev: ChatResolutionPair,
-    updates: ChatResolutionPair,
+    chat: DashboardChatUpdate,
     peerAgentDid: DID,
 ): Promise<NonNullable<UpdateDashboardPayload['notification']>> {
-    const currentAgentResolution = resolveCurrentResolution( prev.agentResolution, updates.agentResolution );
-    const currentPeerResolution = resolveCurrentResolution( prev.peerResolution, updates.peerResolution );
+    const currentAgentResolution = resolveCurrentResolution( prev.agentResolution, chat.agentResolution );
+    const currentPeerResolution = resolveCurrentResolution( prev.peerResolution, chat.peerResolution );
 
     const youLikeThem = likeValue( currentAgentResolution );
     const theyLikeYou = likeValue( currentPeerResolution );
@@ -116,13 +117,14 @@ export async function buildDashboardNotification(
         youLikeThem && theyLikeYou
             ? `${peerName} likes you, and you like them too!`
             : youLikeThem
-              ? "You like ${peerName}"
+              ? `You like ${peerName}`
               : theyLikeYou
                 ? `${peerName} likes you`
-                : "Still gossiping with ${peerName} - no likes yet";
+                : `Still gossiping with ${peerName} - no likes yet`;
     return {
         title,
-        body: 'Tap on the chat to view the full conversation'
+        body: `Tap on the chat to view the full conversation with ${peerName}`,
+        url: getChatDetailUrl( chat.agentDid, peerAgentDid )
     };
 }
 
