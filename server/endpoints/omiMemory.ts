@@ -5,6 +5,7 @@ import { authenticate } from "../middleware.ts";
 import { ensureAccountInGoodStanding } from "../lite-services/a2a/chat/misc.js";
 import { Account } from "../stores/accounts/types.ts";
 
+
 export function registerOmiMemoryEndpoints(app: Express, genAI: GoogleGenAI) {
   app.get("/omi/memory/:key/summarize", authenticate, async (req: any, res) => {
     const { key } = req.params;
@@ -23,10 +24,13 @@ export function registerOmiMemoryEndpoints(app: Express, genAI: GoogleGenAI) {
       const account = accountSnap.data() as Account;
       ensureAccountInGoodStanding(account);
 
-      const instruction = account.memory_summarize?.trim();
-      if (!instruction) {
+      const customPrompt = account.memory_summarize?.trim();
+      const instruction =
+        customPrompt != null && customPrompt.length > 0 ? customPrompt : DEFAULT_SUMMARY_PROMPT;
+
+      /*if (!instruction) {
         return res.status(400).json({ error: "memory_summarize prompt is not configured on your account" });
-      }
+      }*/
 
       let memorySnap;
       try {
@@ -159,3 +163,112 @@ export function registerOmiMemoryEndpoints(app: Express, genAI: GoogleGenAI) {
     }
   });
 }
+
+const DEFAULT_SUMMARY_PROMPT = `You are an AI system that converts raw wearable-device conversation JSON into structured conversational memory for use in future chat context.
+
+Your task is to analyze the provided raw JSON conversation data and extract durable, high-signal memories about:
+- me
+- the other participants
+- shared context
+- ongoing topics
+- preferences
+- goals
+- relationships
+- projects
+- future intentions
+- emotional signals
+- unresolved questions
+- actionable follow-ups
+
+Only extract information that is:
+- explicitly stated
+- strongly implied
+- likely to remain useful in future conversations
+
+Do NOT include:
+- filler dialogue
+- small talk
+- temporary logistics unless important
+- repeated statements
+- low-confidence assumptions
+- private/sensitive information unless clearly intended for memory
+
+Prioritize:
+- stable preferences
+- recurring interests
+- personal context
+- long-term goals
+- challenges
+- relationships
+- commitments
+- opinions
+- upcoming plans
+- important events
+- things that would help continue future conversations naturally
+
+Return ONLY valid JSON.
+
+Use this schema:
+
+{
+  "conversation_summary": "Short summary of the conversation and major themes",
+
+  "user_context": {
+    "interests": [],
+    "goals": [],
+    "projects": [],
+    "preferences": [],
+    "challenges": [],
+    "opinions": [],
+    "personal_details": [],
+    "future_plans": [],
+    "follow_up_topics": [],
+    "facts": []
+  },
+
+  "shared_context": {
+    "relationships": [],
+    "shared_projects": [],
+    "shared_interests": [],
+    "important_events": [],
+    "open_questions": [],
+    "action_items": []
+  },
+
+  "memory_candidates": [
+    {
+      "text": "Atomic memory statement",
+      "subject": "me | participant name",
+      "category": "interest | goal | preference | project | relationship | challenge | opinion | event | follow_up",
+      "confidence": 0.0,
+      "importance": 0.0
+    }
+  ]
+}
+
+Rules:
+- Memories should be atomic and self-contained.
+- User context is for the person in the Raw Data marked as "is_user": true
+- Use concise natural language.
+- Avoid duplicates.
+- Preserve uncertainty when needed.
+- Confidence and importance scores should be between 0 and 1.
+- If speaker attribution is unclear, mark it explicitly.
+- Prefer semantic usefulness over completeness.
+- Infer follow-up opportunities when strongly supported.
+- Normalize vague references into explicit statements when possible.
+
+Examples of good memory candidates:
+- "Mike is exploring AI startup ideas."
+- "Sarah is considering changing jobs due to burnout."
+- "Mike prefers camping in remote mountain areas."
+- "John wants advice about fundraising."
+
+Examples of bad memory candidates:
+- "They said hello."
+- "Someone laughed."
+- "The meeting happened at 3pm."
+- "They talked about technology."
+
+The output will be used as long-term conversational memory for future AI chat interactions.
+`;

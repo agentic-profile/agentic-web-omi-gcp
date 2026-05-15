@@ -3,12 +3,11 @@ import { GoogleGenAI } from "@google/genai";
 import fs from "fs";
 import { adminDb } from "../firebase";
 import { authenticate } from "../middleware";
-import { ensureAccountInGoodStanding, ensureAgentOwnerInGoodStanding } from "../lite-services/a2a/chat/misc.js";
+import { ensureAccountInGoodStanding } from "../lite-services/a2a/chat/misc.js";
 import { Account } from "../stores/accounts/types";
 
 export function registerChatEndpoints(app: Express, genAI: GoogleGenAI) {
   app.post("/api/chat", authenticate, async (req: any, res) => {
-    console.log("[API] POST /api/chat");
     const { message } = req.body;
     const userId = req.user.uid;
     
@@ -35,20 +34,23 @@ export function registerChatEndpoints(app: Express, genAI: GoogleGenAI) {
       const memoriesSnapshot = await adminDb
         .collection("memories")
         .where("userId", "==", userId)
-        .limit(10)
+        .orderBy("created", "desc")
+        .limit(100)
         .get();
       
       const memories = memoriesSnapshot.docs
         .map(doc => {
-          const data = doc.data();
-          return JSON.stringify(data.summary || data.raw || data.text || "");
+          const summary = doc.data().summary;
+          return !summary || Object.keys(summary).length === 0 ? null : summary;
         })
-        .join("\n---\n");
-      
+        .filter(summary => summary !== null);
+
+      const contents = `${instruction}\n\nMemories as JSON:\n${JSON.stringify(memories,null,2)}\n\nUser: ${message}`;
+      console.log( 'contents:', contents );
 
       const response = await genAI.models.generateContent({
         model: "gemini-3-flash-preview",
-        contents: `${instruction}\n\n${memories}\n\nUser: ${message}`,
+        contents
       });
 
       res.json({ reply: response.text });

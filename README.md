@@ -99,13 +99,25 @@ This runs `server.ts` (Express) and mounts Vite in middleware mode so the SPA an
 
 ### Firebase emulators (optional)
 
-If you want to run against local Firebase emulators:
+This app uses a **named** Firestore database (`firestoreDatabaseId` in `firebase-applet-config.json`). Rules in `firestore.rules` are wired to that database in `firebase.json` for the emulator.
+
+1. Start emulators (loads `firestore.rules` on startup — **restart after rule edits**):
 
 ```bash
 pnpm emulators
 ```
 
-The client automatically connects to Auth/Firestore emulators when running on `localhost`.
+2. In another terminal, run the app in emulator mode (client + Admin SDK both use localhost):
+
+```bash
+pnpm dev:emulator
+```
+
+3. Sign in with **Login (Emulator)** (email/password user created in the Auth emulator).
+
+The client does **not** use emulators just because you are on `localhost`; you need `VITE_AUTH_MODE=emulator` (set by `pnpm dev:emulator`) or `VITE_USE_FIREBASE_EMULATORS=true`. Without that, the app talks to **production** Firestore and undeployed rule changes will not apply.
+
+To deploy rule changes to production: `firebase deploy --only firestore:rules`.
 
 ## Deploy to Google Cloud Run
 

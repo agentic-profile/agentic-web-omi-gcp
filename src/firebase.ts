@@ -16,4 +16,10 @@ export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 if (typeof window !== "undefined" && usingEmulators()) {
   connectAuthEmulator(auth, "http://localhost:9099", { disableWarnings: true });
   connectFirestoreEmulator(db, "localhost", 8080);
+  if ((import.meta as any).env?.DEV) {
+    console.info(
+      "[Firebase] Using Auth + Firestore emulators",
+      `(database: ${firebaseConfig.firestoreDatabaseId ?? "(default)"})`
+    );
+  }
 }

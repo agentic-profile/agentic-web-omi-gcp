@@ -45,6 +45,9 @@ if (firebaseConfig.projectId) {
 
 export { admin };
 const databaseId = firebaseConfig.firestoreDatabaseId || "(default)";
+if (process.env.FIRESTORE_EMULATOR_HOST) {
+  console.log(`[Firebase Admin] Firestore emulator: ${process.env.FIRESTORE_EMULATOR_HOST}`);
+}
 console.log(`[Firebase Admin] Using Firestore database: ${databaseId}`);
 export const adminDb = getFirestore(databaseId);
 adminDb.settings({ ignoreUndefinedProperties: true });

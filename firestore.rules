@@ -9,7 +9,7 @@ service cloud.firestore {
     }
 
     function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+      return isAuthenticated() && request.auth.uid == string(userId);
     }
 
     // ===============================================================
@@ -35,7 +35,7 @@ service cloud.firestore {
       allow read, delete: if isOwner(resource.data.userId);
       allow create: if isOwner(request.resource.data.userId);
       allow update: if isOwner(resource.data.userId)
-        && request.resource.data.userId == resource.data.userId;
+        && string(request.resource.data.userId) == string(resource.data.userId);
     }
 
     // API Keys: Only the owner can manage their API keys
