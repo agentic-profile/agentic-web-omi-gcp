@@ -1,13 +1,82 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { User } from "firebase/auth";
 import { collection, query, where, orderBy, onSnapshot, Timestamp, deleteDoc, doc } from "firebase/firestore";
 import { db } from "../firebase";
 import { Card, CardContent, CardHeader } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
 import { ScrollArea } from "@/src/components/ui/scroll-area";
-import { History, Calendar, MessageSquareQuote, Search, Trash2, Code, Sparkles } from "lucide-react";
+import { History, Calendar, MessageSquareQuote, Search, Trash2, Code, Sparkles, Download, Loader2 } from "lucide-react";
 import { Input } from "@/src/components/ui/input";
 import { toast } from "sonner";
+
+function ConfirmDeleteModal({
+  open,
+  title = "Delete this memory?",
+  description = "Permanently remove this memory and its data. This cannot be undone.",
+  confirmLabel = "Delete",
+  cancelLabel = "Cancel",
+  confirming,
+  onConfirm,
+  onDismiss,
+}: {
+  open: boolean;
+  title?: string;
+  description?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  confirming: boolean;
+  onConfirm: () => void | Promise<void>;
+  onDismiss: () => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onDismiss();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onDismiss]);
+
+  if (!open) return null;
+
+  const modal = (
+    <div className="fixed inset-0 z-[210] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 cursor-pointer" aria-hidden onClick={onDismiss} />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-delete-memory-title"
+        className="relative z-10 w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl"
+      >
+        <h2 id="confirm-delete-memory-title" className="text-xl font-semibold text-zinc-100 mb-2">
+          {title}
+        </h2>
+        <p className="text-sm text-zinc-400 mb-6">{description}</p>
+        <div className="flex justify-end gap-3">
+          <Button variant="secondary" onClick={onDismiss} disabled={confirming}>
+            {cancelLabel}
+          </Button>
+          <Button variant="destructive" onClick={() => void onConfirm()} disabled={confirming} className="gap-2">
+            {confirming ? <Loader2 className="animate-spin" size={16} /> : null}
+            {confirmLabel}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return typeof document !== "undefined" ? createPortal(modal, document.body) : null;
+}
 
 interface Memory {
   id: string;
@@ -25,6 +94,8 @@ export default function OmiMemoriesPage({ user }: { user: User }) {
   const [memories, setMemories] = useState<Memory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const q = query(
@@ -55,14 +126,59 @@ export default function OmiMemoriesPage({ user }: { user: User }) {
     return rawStr.includes(searchTerm.toLowerCase()) || summaryStr.includes(searchTerm.toLowerCase());
   });
 
-  const handleDelete = async (id: string) => {
+  const getMemoryDate = (m: Memory) => m.created?.toDate?.() ?? m.timestamp?.toDate?.() ?? null;
+
+  const formatMemoryDate = (d: Date) =>
+    d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+
+  const memoryDates = filteredMemories.map(getMemoryDate).filter((d): d is Date => d !== null);
+  const memoryCount = filteredMemories.length;
+  const memoryDateRange =
+    memoryDates.length > 0
+      ? (() => {
+          const min = new Date(Math.min(...memoryDates.map((d) => d.getTime())));
+          const max = new Date(Math.max(...memoryDates.map((d) => d.getTime())));
+          return min.getTime() === max.getTime()
+            ? formatMemoryDate(min)
+            : `${formatMemoryDate(min)} – ${formatMemoryDate(max)}`;
+        })()
+      : null;
+
+  const deleteTarget = deleteTargetId ? memories.find((m) => m.id === deleteTargetId) : null;
+
+  const performDelete = async () => {
+    if (!deleteTargetId) return;
+    setDeleting(true);
     try {
-      await deleteDoc(doc(db, "memories", id));
+      await deleteDoc(doc(db, "memories", deleteTargetId));
       toast.success("Memory deleted");
+      setDeleteTargetId(null);
     } catch (error) {
       console.error("Delete error:", error);
       toast.error("Failed to delete memory");
+    } finally {
+      setDeleting(false);
     }
+  };
+
+  const serializeTimestamp = (value: Timestamp | undefined) =>
+    value?.toDate?.()?.toISOString() ?? value;
+
+  const handleDownload = () => {
+    const payload = memories.map((m) => ({
+      ...m,
+      created: serializeTimestamp(m.created),
+      summarized: serializeTimestamp(m.summarized),
+      timestamp: serializeTimestamp(m.timestamp),
+    }));
+    const blob = new Blob([JSON.stringify({ memories: payload }, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `omi-memories-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("Memories downloaded");
   };
 
   return (
@@ -87,6 +203,31 @@ export default function OmiMemoriesPage({ user }: { user: User }) {
         </div>
       </div>
 
+      {!loading && memories.length > 0 && (
+        <div className="flex items-center justify-between mb-4 shrink-0">
+          <p className="text-sm text-zinc-400">
+            <span className="text-zinc-300 font-medium">
+              {memoryCount} {memoryCount === 1 ? "memory" : "memories"}
+            </span>
+            {memoryDateRange && (
+              <>
+                <span className="mx-2 text-zinc-600">·</span>
+                {memoryDateRange}
+              </>
+            )}
+          </p>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleDownload}
+            className="h-9 w-9 text-zinc-400 hover:text-orange-500 hover:bg-orange-500/10"
+            title="Download memories as JSON"
+          >
+            <Download size={18} />
+          </Button>
+        </div>
+      )}
+
       <ScrollArea className="flex-1 -mx-2 md:-mx-4 px-2 md:px-4">
         {loading ? (
           <div className="flex justify-center py-20">Loading memories...</div>
@@ -101,7 +242,7 @@ export default function OmiMemoriesPage({ user }: { user: User }) {
         ) : (
           <div className="grid gap-8 pb-12">
             {filteredMemories.map((memory) => (
-              <Card key={memory.id} className="bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 transition-all group overflow-hidden">
+              <Card key={memory.id} className="bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 transition-all overflow-hidden">
                 <CardHeader className="pb-4 flex flex-row items-center justify-between space-y-0 bg-zinc-900/80 border-b border-zinc-800">
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2 text-xs font-medium text-zinc-500 uppercase tracking-wider">
@@ -112,8 +253,8 @@ export default function OmiMemoriesPage({ user }: { user: User }) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDelete(memory.id)}
-                    className="h-8 w-8 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => setDeleteTargetId(memory.id)}
+                    className="h-8 w-8 text-zinc-500 hover:text-red-500 hover:bg-red-500/10"
                   >
                     <Trash2 size={14} />
                   </Button>
@@ -156,6 +297,20 @@ export default function OmiMemoriesPage({ user }: { user: User }) {
           </div>
         )}
       </ScrollArea>
+
+      <ConfirmDeleteModal
+        open={deleteTargetId !== null}
+        description={
+          deleteTarget
+            ? `Permanently remove the memory from ${getMemoryDate(deleteTarget)?.toLocaleString() ?? "this date"}. This cannot be undone.`
+            : "Permanently remove this memory and its data. This cannot be undone."
+        }
+        confirming={deleting}
+        onDismiss={() => {
+          if (!deleting) setDeleteTargetId(null);
+        }}
+        onConfirm={performDelete}
+      />
     </div>
   );
 }

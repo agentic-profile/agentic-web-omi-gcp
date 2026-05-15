@@ -111,6 +111,15 @@ The client automatically connects to Auth/Firestore emulators when running on `l
 
 This repo is built to deploy as a **single Cloud Run service** (Express server + static SPA build).
 
+Make sure you have authenticated with Google Cloud in your shell:
+
+```bash
+gcloud auth login
+npx firebase login
+```
+
+
+
 ### Deploy the server to Cloud Run
 
 The repository already includes a deploy script:
