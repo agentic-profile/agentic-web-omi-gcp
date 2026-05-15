@@ -16,6 +16,7 @@ import { registerWellKnownEndpoints } from "./server/endpoints/wellKnown.ts";
 import { registerChatEndpoints } from "./server/endpoints/apiChat.ts";
 import { registerOmiApiKeyEndpoints } from "./server/endpoints/omiApiKey.ts";
 import { registerOmiMemoryEndpoints } from "./server/endpoints/omiMemory.ts";
+import { registerOmiMemoryImportEndpoints } from "./server/endpoints/omiMemoryImport.ts";
 import { registerPublishEndpoints } from "./server/endpoints/publish.ts";
 import { registerAccountEndpoints } from "./server/endpoints/account.ts";
 import { registerAgentChatsEndpoints } from "./server/endpoints/agentChats.ts";
@@ -30,7 +31,13 @@ async function startServer() {
   const app = express();
   const PORT = process.env.PORT || 3000;
 
-  app.use(express.json());
+  const defaultJsonLimit = process.env.JSON_BODY_LIMIT ?? "1mb";
+  const memoryImportJsonLimit = process.env.MEMORY_IMPORT_JSON_LIMIT ?? "32mb";
+
+  app.use((req, res, next) => {
+    const limit = req.path === "/api/memories/import" ? memoryImportJsonLimit : defaultJsonLimit;
+    express.json({ limit })(req, res, next);
+  });
   app.use((req, _res, next) => {
     console.log(`${req.method} ${req.originalUrl}`);
     next();
@@ -64,6 +71,7 @@ async function startServer() {
   registerChatEndpoints(app, genAI);
   registerOmiApiKeyEndpoints(app);
   registerOmiMemoryEndpoints(app, genAI);
+  registerOmiMemoryImportEndpoints(app);
   registerPublishEndpoints(app);
   registerAgentChatsEndpoints(app);
   registerAdminEndpoints(app);
@@ -93,6 +101,10 @@ async function startServer() {
     ) => {
       if (isServerError(err))
         res.status(resolveServerErrorHttpStatus(err)).json(describeServerError(err));
+      else if (err instanceof Error && err.name === "PayloadTooLargeError")
+        res.status(413).json({
+          error: "Request body too large. Try splitting your export into smaller files, or contact support to raise the limit.",
+        });
       else
         res.status(500).json({ error: `Internal Server Error: ${err}` });
     }

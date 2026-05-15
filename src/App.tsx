@@ -28,7 +28,8 @@ import OmiMemoriesPage from "./pages/OmiMemoriesPage";
 import MorePage from "./pages/MorePage";
 import MyAccountPage from "./pages/MyAccountPage";
 import EditPromptsPage from "./pages/EditPromptsPage";
-import TestWebhookPage from "./pages/TestWebhookPage";
+import TestWebhookPage from "./pages/tools/TestWebhookPage.tsx";
+import ImportMemoriesPage from "./pages/tools/ImportMemoriesPage.tsx";
 import PublishPage from "./pages/publish/PublishPage";
 import SettingsPage from "./pages/SettingsPage";
 import ManagePage from "./pages/ManagePage";
@@ -208,6 +209,7 @@ export default function App() {
             <Route path="/account" element={user ? <MyAccountPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/edit-prompts" element={user ? <EditPromptsPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/settings" element={user ? <SettingsPage /> : <LandingPage user={user} login={login} />} />
+            <Route path="/import-memories" element={user ? <ImportMemoriesPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/test" element={user ? <TestWebhookPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/manage-users" element={user ? <ManageUsersPage user={user} /> : <LandingPage user={user} login={login} />} />
           </Routes>

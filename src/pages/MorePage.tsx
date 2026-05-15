@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { doc, onSnapshot } from "firebase/firestore";
 import { User } from "firebase/auth";
 import { db } from "../firebase";
-import { User as UserIcon, Terminal, FileEdit, ChevronRight, History, MessageSquare, Settings, Bot, Users } from "lucide-react";
+import { User as UserIcon, Terminal, FileEdit, ChevronRight, History, MessageSquare, Settings, Bot, Users, Upload } from "lucide-react";
 
 type AccountData = {
   role?: string;
@@ -83,7 +83,8 @@ export default function MorePage({ user }: { user: User }) {
       {
         title: "Tools",
         options: [
-          { label: "Test", icon: <Terminal size={20} />, path: "/test" },
+          { label: "Import Memories", icon: <Upload size={20} />, path: "/import-memories" },
+          { label: "Test Webhook", icon: <Terminal size={20} />, path: "/test" },
           { label: "Manage Users", icon: <Users size={20} />, path: "/manage-users", hidden: !isAdmin },
         ] satisfies Option[],
       },
