@@ -199,7 +199,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<LandingPage user={user} login={login} />} />
             <Route path="/reflection-chat" element={user ? <ReflectionChatPage user={user} /> : <LandingPage user={user} login={login} />} />
-            <Route path="/history" element={user ? <OmiMemoriesPage user={user} /> : <LandingPage user={user} login={login} />} />
+            <Route path="/memories" element={user ? <OmiMemoriesPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/setup" element={user ? <OmiSetupPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/publish" element={user ? <PublishPage user={user} /> : <LandingPage user={user} login={login} />} />
             <Route path="/more" element={user ? <MorePage user={user} /> : <LandingPage user={user} login={login} />} />

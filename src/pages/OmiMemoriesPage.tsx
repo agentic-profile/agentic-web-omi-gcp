@@ -1,14 +1,29 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { User } from "firebase/auth";
-import { collection, query, where, orderBy, onSnapshot, Timestamp, deleteDoc, doc } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  Timestamp,
+  deleteDoc,
+  doc,
+  updateDoc,
+  deleteField,
+  serverTimestamp,
+} from "firebase/firestore";
 import { db } from "../firebase";
 import { Card, CardContent, CardHeader } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
 import { ScrollArea } from "@/src/components/ui/scroll-area";
-import { History, Calendar, MessageSquareQuote, Search, Trash2, Code, Sparkles, Download, Loader2 } from "lucide-react";
+import { History, Calendar, MessageSquareQuote, Search, Trash2, Code, Sparkles, Download, Loader2, Pencil } from "lucide-react";
+import { JsonEditorModal } from "@/src/components/JsonEditorModal";
 import { Input } from "@/src/components/ui/input";
 import { toast } from "sonner";
+import { ReloadSpinner } from "@/src/components/ReloadSpinner";
+import { getIdTokenOrLogout } from "@/src/auth/idToken";
 
 function ConfirmDeleteModal({
   open,
@@ -96,6 +111,7 @@ export default function OmiMemoriesPage({ user }: { user: User }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [jsonEditor, setJsonEditor] = useState<{ memoryId: string; field: "raw" | "summary" } | null>(null);
 
   useEffect(() => {
     const q = query(
@@ -145,6 +161,7 @@ export default function OmiMemoriesPage({ user }: { user: User }) {
       : null;
 
   const deleteTarget = deleteTargetId ? memories.find((m) => m.id === deleteTargetId) : null;
+  const jsonEditorMemory = jsonEditor ? memories.find((m) => m.id === jsonEditor.memoryId) : null;
 
   const performDelete = async () => {
     if (!deleteTargetId) return;
@@ -163,6 +180,65 @@ export default function OmiMemoriesPage({ user }: { user: User }) {
 
   const serializeTimestamp = (value: Timestamp | undefined) =>
     value?.toDate?.()?.toISOString() ?? value;
+
+  const getRawDisplay = (memory: Memory) => memory.raw ?? (memory.text != null ? { text: memory.text } : {});
+
+  const handleSaveJson = async (parsed: unknown) => {
+    if (!jsonEditor) return;
+    const { memoryId, field } = jsonEditor;
+    try {
+      const ref = doc(db, "memories", memoryId);
+      if (field === "raw") {
+        await updateDoc(ref, { raw: parsed, text: deleteField() });
+      } else {
+        await updateDoc(ref, { summary: parsed, summarized: serverTimestamp() });
+      }
+      toast.success(field === "raw" ? "Raw data updated" : "Summary updated");
+      setJsonEditor(null);
+    } catch (error) {
+      console.error("Update error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to update memory");
+      throw error;
+    }
+  };
+
+  const handleDeleteSummary = async () => {
+    if (!jsonEditor || jsonEditor.field !== "summary") return;
+    const { memoryId } = jsonEditor;
+    try {
+      await updateDoc(doc(db, "memories", memoryId), {
+        summary: deleteField(),
+        summarized: deleteField(),
+      });
+      toast.success("Summary removed");
+      setJsonEditor(null);
+    } catch (error) {
+      console.error("Delete summary error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to delete summary");
+      throw error;
+    }
+  };
+
+  const handleSummarize = async (memoryId: string) => {
+    try {
+      const token = await getIdTokenOrLogout(user);
+      const response = await fetch(`/omi/memory/${encodeURIComponent(memoryId)}/summarize`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        toast.error(data.error || "Failed to summarize memory");
+        return;
+      }
+      setMemories((prev) =>
+        prev.map((m) => (m.id === memoryId ? { ...m, summary: data.summary } : m))
+      );
+      toast.success("Summary updated");
+    } catch (error) {
+      console.error("Summarize error:", error);
+      toast.error("Failed to summarize memory");
+    }
+  };
 
   const handleDownload = () => {
     const payload = memories.map((m) => ({
@@ -262,22 +338,50 @@ export default function OmiMemoriesPage({ user }: { user: User }) {
                 <CardContent className="p-0 grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-zinc-800">
                   {/* Raw Data Section */}
                   <div className="p-6 space-y-4">
-                    <div className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-widest">
-                      <Code size={14} className="text-blue-500" />
-                      Raw JSON Data
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-widest">
+                        <Code size={14} className="text-blue-500" />
+                        Raw JSON Data
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        onClick={() => setJsonEditor({ memoryId: memory.id, field: "raw" })}
+                        className="text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 shrink-0"
+                        title="Edit raw JSON"
+                      >
+                        <Pencil size={14} />
+                      </Button>
                     </div>
                     <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800 max-h-[300px] overflow-auto">
                       <pre className="text-[10px] md:text-xs font-mono text-blue-400 leading-relaxed">
-                        {JSON.stringify(memory.raw || { text: memory.text }, null, 2)}
+                        {JSON.stringify(getRawDisplay(memory), null, 2)}
                       </pre>
                     </div>
                   </div>
 
                   {/* Summary Section */}
                   <div className="p-6 space-y-4 bg-orange-500/[0.02]">
-                    <div className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-widest">
-                      <Sparkles size={14} className="text-orange-500" />
-                      AI Summary
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-widest">
+                        <Sparkles size={14} className="text-orange-500" />
+                        AI Summary
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          onClick={() => setJsonEditor({ memoryId: memory.id, field: "summary" })}
+                          className="text-zinc-500 hover:text-orange-400 hover:bg-orange-500/10 shrink-0"
+                          title={memory.summary ? "Edit summary JSON" : "Add summary JSON"}
+                        >
+                          <Pencil size={14} />
+                        </Button>
+                        <ReloadSpinner
+                          title="Regenerate AI summary"
+                          onReload={() => handleSummarize(memory.id)}
+                        />
+                      </div>
                     </div>
                     {memory.summary ? (
                       <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800 max-h-[300px] overflow-auto">
@@ -298,6 +402,26 @@ export default function OmiMemoriesPage({ user }: { user: User }) {
         )}
       </ScrollArea>
 
+
+      <JsonEditorModal
+        open={jsonEditor !== null && jsonEditorMemory != null}
+        title={jsonEditor?.field === "raw" ? "Edit raw JSON" : "Edit AI summary"}
+        description={
+          jsonEditor?.field === "raw"
+            ? "Update the device payload stored for this memory."
+            : "Update or remove the AI-generated summary for this memory."
+        }
+        initialValue={
+          jsonEditor?.field === "raw"
+            ? getRawDisplay(jsonEditorMemory!)
+            : jsonEditorMemory?.summary ?? {}
+        }
+        onSave={handleSaveJson}
+        onDismiss={() => setJsonEditor(null)}
+        onDelete={jsonEditor?.field === "summary" && jsonEditorMemory?.summary ? handleDeleteSummary : undefined}
+        deleteLabel="Remove summary"
+        saveLabel="Save changes"
+      />
       <ConfirmDeleteModal
         open={deleteTargetId !== null}
         description={

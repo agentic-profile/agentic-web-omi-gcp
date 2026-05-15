@@ -27,13 +27,15 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Memories: Only the owner can read or delete their memories.
-    // Creation is usually handled by the server Admin SDK (bypass rules), 
+    // Memories: Only the owner can read, update, or delete their memories.
+    // Creation is usually handled by the server Admin SDK (bypass rules),
     // but we allow client-side creation if the userId matches.
+    // Updates cannot change ownership (userId must stay the same).
     match /memories/{memoryId} {
       allow read, delete: if isOwner(resource.data.userId);
       allow create: if isOwner(request.resource.data.userId);
-      allow update: if false; // Memories are immutable
+      allow update: if isOwner(resource.data.userId)
+        && request.resource.data.userId == resource.data.userId;
     }
 
     // API Keys: Only the owner can manage their API keys

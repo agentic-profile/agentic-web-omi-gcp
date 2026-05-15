@@ -68,13 +68,11 @@ export function registerOmiMemoryImportEndpoints(app: Express) {
             continue;
           }
 
-          const ref = adminDb.collection("memories").doc(id);
-          const existing = await ref.get();
-          if (existing.exists && existing.data()?.userId !== uid) {
-            skipped++;
-            errors.push(`Skipped memory ${id}: belongs to another user`);
-            continue;
-          }
+          const existingRef = adminDb.collection("memories").doc(id);
+          const existing = await existingRef.get();
+          const ref = existing.exists && existing.data()?.userId !== uid
+              ? adminDb.collection("memories").doc()
+              : existingRef;
 
           const payload = {
             raw: item.raw ?? (item.text != null ? { text: item.text } : {}),
@@ -85,7 +83,7 @@ export function registerOmiMemoryImportEndpoints(app: Express) {
           };
 
           batch.set(ref, payload, { merge: true });
-          if (existing.exists) updated++;
+          if (ref === existingRef && existing.exists) updated++;
           else created++;
         }
 

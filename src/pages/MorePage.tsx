@@ -67,7 +67,7 @@ export default function MorePage({ user }: { user: User }) {
       {
         title: "Chats & memories",
         options: [
-          { label: "Omi Memories", icon: <History size={20} />, path: "/history" },
+          { label: "Omi Memories", icon: <History size={20} />, path: "/memories" },
           { label: "Agent Chats", icon: <Bot size={20} />, path: "/agent-chats" },
           { label: "Reflection Chat", icon: <MessageSquare size={20} />, path: "/reflection-chat" },
         ] satisfies Option[],
